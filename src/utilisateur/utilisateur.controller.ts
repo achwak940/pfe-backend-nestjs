@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { UtilisateurService } from './utilisateur.service';
 import { CreateUtilisateurDto } from './dto/create-utilisateur.dto';
 import { UpdateUtilisateurDto } from './dto/update-utilisateur.dto';
@@ -7,7 +7,7 @@ import { UpdateUtilisateurDto } from './dto/update-utilisateur.dto';
 export class UtilisateurController {
   constructor(private readonly utilisateurService: UtilisateurService) {}
 
-  @Post()
+  @Post("/register")
   create(@Body() createUtilisateurDto: CreateUtilisateurDto) {
     return this.utilisateurService.create(createUtilisateurDto);
   }
@@ -16,7 +16,13 @@ export class UtilisateurController {
   findAll() {
     return this.utilisateurService.findAll();
   }
-
+@Get("/verification")
+  verificationToken(@Query("token") token:string){
+    if(!token){
+      return {erreur:"Le token est manquant"}
+    }
+    return this.utilisateurService.verificationToken(token)
+  }
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.utilisateurService.findOne(+id);
