@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Body, Injectable, Post } from '@nestjs/common';
 import { CreateUtilisateurDto } from './dto/create-utilisateur.dto';
 import { UpdateUtilisateurDto } from './dto/update-utilisateur.dto';
 import { Utilisateur } from './entities/utilisateur.entity';
@@ -113,6 +113,7 @@ export class UtilisateurService {
     return {message:"Compte vérifié avec succès"}
    
   }
+
   findAll() {
     return `This action returns all utilisateur`;
   }

@@ -5,6 +5,7 @@ import { UtilisateurModule } from './utilisateur/utilisateur.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Utilisateur } from './utilisateur/entities/utilisateur.entity';
+import { AuthentificationModule } from './authentification/authentification.module';
 
 @Module({
   imports: [  
@@ -23,7 +24,8 @@ import { Utilisateur } from './utilisateur/entities/utilisateur.entity';
         synchronize:true,//creation auto de table si n'existe pas 
       })
     }),
-    UtilisateurModule
+    UtilisateurModule,
+    AuthentificationModule
   ],
   controllers: [AppController],
   providers: [AppService],
