@@ -1,5 +1,6 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 import { Role } from "../role.enum";
+import { Status } from "../status.enum";
 @Entity()
 export class Utilisateur {
     @PrimaryGeneratedColumn()
@@ -18,6 +19,13 @@ export class Utilisateur {
         default:Role.USER_CONNECTE
     })
     role:Role
+  @Column({
+  type: 'enum',
+  enum: Status,
+  default: Status.INACTIF
+})
+statut: Status;
+
     @Column({default:false})
     est_verifie:boolean
     @Column({type: 'varchar', nullable:true})

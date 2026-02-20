@@ -5,6 +5,7 @@ import { Utilisateur } from './entities/utilisateur.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { text } from 'stream/consumers';
+import { Status } from './status.enum';
 @Injectable()
 export class UtilisateurService {
   constructor(@InjectRepository(Utilisateur) private utilisateurRepository: Repository<Utilisateur>){
@@ -64,7 +65,8 @@ export class UtilisateurService {
     email,
     mot_de_passe:mot_de_passe_hache,
     code_verification:token,
-    token_expiration:token_expiration
+    token_expiration:token_expiration,
+     statut: Status.INACTIF
   })
   await this.utilisateurRepository.save(utilisateur);
   const lienverification=`https://intactly-leal-beverley.ngrok-free.dev/utilisateur/verification?token=${token}`
@@ -107,23 +109,30 @@ export class UtilisateurService {
     }
     utilisateur.est_verifie=true;
     utilisateur.code_verification=null;
+    utilisateur.statut = Status.ACTIF;
     utilisateur.token_expiration=null;
-
     await this.utilisateurRepository.save(utilisateur);
     return {message:"Compte vérifié avec succès"}
    
   }
-
-  findAll() {
-    return `This action returns all utilisateur`;
+  getAllusers() {
+    return this.utilisateurRepository.find();
   }
-  findOne(id: number) {
-    return `This action returns a #${id} utilisateur`;
+ async FindUserById(id: number) {
+  return this.utilisateurRepository.findOne({ where: { id } });
+}
+async changeStatus(id: number, statut: Status) {
+  const user = await this.FindUserById(id); 
+  if (!user) {
+    return { erreur: "Utilisateur inconnu" };
   }
+  user.statut = statut; 
+  await this.utilisateurRepository.save(user); 
+  return { message: `Statut modifié vers ${statut}`, utilisateur: user };
+}
   update(id: number, updateUtilisateurDto: UpdateUtilisateurDto) {
     return `This action updates a #${id} utilisateur`;
   }
-
   remove(id: number) {
     return `This action removes a #${id} utilisateur`;
   }

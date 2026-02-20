@@ -1,38 +1,50 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { UtilisateurService } from './utilisateur.service';
 import { CreateUtilisateurDto } from './dto/create-utilisateur.dto';
 import { UpdateUtilisateurDto } from './dto/update-utilisateur.dto';
-
+import { Status } from './status.enum';
 @Controller('utilisateur')
 export class UtilisateurController {
   constructor(private readonly utilisateurService: UtilisateurService) {}
-
-  @Post("/register")
+  @Post('/register')
   create(@Body() createUtilisateurDto: CreateUtilisateurDto) {
     return this.utilisateurService.create(createUtilisateurDto);
   }
-
-  @Get()
+  @Get('/all')
   findAll() {
-    return this.utilisateurService.findAll();
+    return this.utilisateurService.getAllusers();
   }
-@Get("/verification")
-  verificationToken(@Query("token") token:string){
-    if(!token){
-      return {erreur:"Le token est manquant"}
+  @Get('/verification')
+  verificationToken(@Query('token') token: string) {
+    if (!token) {
+      return { erreur: 'Le token est manquant' };
     }
-    return this.utilisateurService.verificationToken(token)
+    return this.utilisateurService.verificationToken(token);
   }
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.utilisateurService.findOne(+id);
+  findUserById(@Param('id') id: string) {
+    return this.utilisateurService.FindUserById(+id);
   }
-
+  @Patch(':id/statuts')
+  changeStatus(@Param('id') id: number, @Body('statut') statut: Status) {
+    return this.utilisateurService.changeStatus(id, statut);
+  }
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUtilisateurDto: UpdateUtilisateurDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateUtilisateurDto: UpdateUtilisateurDto,
+  ) {
     return this.utilisateurService.update(+id, updateUtilisateurDto);
   }
-
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.utilisateurService.remove(+id);
