@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { text } from 'stream/consumers';
 import { Status } from './status.enum';
+import { Role } from './role.enum';
 @Injectable()
 export class UtilisateurService {
   constructor(@InjectRepository(Utilisateur) private utilisateurRepository: Repository<Utilisateur>){
@@ -129,6 +130,17 @@ async changeStatus(id: number, statut: Status) {
   user.statut = statut; 
   await this.utilisateurRepository.save(user); 
   return { message: `Statut modifié vers ${statut}`, utilisateur: user };
+}
+async chnageRole(id:number,role:Role){
+  const user= await this.FindUserById(id)
+  if(!user){
+    return {
+      erreur:"Utilisateur inconnu"
+    }
+  }
+  user.role=role
+  await this.utilisateurRepository.save(user)
+    return { message: `Role modifié vers ${role}`, utilisateur: user };
 }
   update(id: number, updateUtilisateurDto: UpdateUtilisateurDto) {
     return `This action updates a #${id} utilisateur`;

@@ -12,6 +12,7 @@ import { UtilisateurService } from './utilisateur.service';
 import { CreateUtilisateurDto } from './dto/create-utilisateur.dto';
 import { UpdateUtilisateurDto } from './dto/update-utilisateur.dto';
 import { Status } from './status.enum';
+import { Role } from './role.enum';
 @Controller('utilisateur')
 export class UtilisateurController {
   constructor(private readonly utilisateurService: UtilisateurService) {}
@@ -37,6 +38,10 @@ export class UtilisateurController {
   @Patch(':id/statuts')
   changeStatus(@Param('id') id: number, @Body('statut') statut: Status) {
     return this.utilisateurService.changeStatus(id, statut);
+  }
+   @Patch(':id/role')
+  changeRole(@Param('id') id: number, @Body('role') role:Role) {
+    return this.utilisateurService.chnageRole(id,role);
   }
   @Patch(':id')
   update(
