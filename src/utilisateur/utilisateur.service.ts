@@ -7,9 +7,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { text } from 'stream/consumers';
 import { Status } from './status.enum';
 import { Role } from './role.enum';
+import { Enquete } from 'src/enquete/entities/enquete.entity';
 @Injectable()
 export class UtilisateurService {
-  constructor(@InjectRepository(Utilisateur) private utilisateurRepository: Repository<Utilisateur>){
+  constructor(
+    @InjectRepository(Utilisateur) private utilisateurRepository: Repository<Utilisateur>,
+    @InjectRepository(Enquete) private enqueteRepo: Repository<Enquete>,  
+){
   }
   async create(createUtilisateurDto: CreateUtilisateurDto) {
     const prenom=createUtilisateurDto.prenom
@@ -142,10 +146,34 @@ async chnageRole(id:number,role:Role){
   await this.utilisateurRepository.save(user)
     return { message: `Role modifié vers ${role}`, utilisateur: user };
 }
+async searchUsers(query: string) {
+  const qb = this.utilisateurRepository.createQueryBuilder('user');
+
+  if (query) {
+    qb.where('user.prenom ILIKE :q', { q: `%${query}%` })
+      .orWhere('user.nom ILIKE :q', { q: `%${query}%` })
+      .orWhere('user.email ILIKE :q', { q: `%${query}%` })
+      .orWhere('user.role ILIKE :q', { q: `%${query}%` });
+  }
+  return qb.getMany();
+}
   update(id: number, updateUtilisateurDto: UpdateUtilisateurDto) {
     return `This action updates a #${id} utilisateur`;
   }
   remove(id: number) {
     return `This action removes a #${id} utilisateur`;
   }
+async findEnquetesByUser(userId: number) {
+    return this.enqueteRepo.find({
+        where: { user: { id: userId } },
+        relations: ['user'], // charger la relation
+        order: { createAt: 'DESC' }
+    });
 }
+async findNumberEnquetesByUser(userId: number): Promise<number> {
+    return this.enqueteRepo.count({
+        where: { user: { id: userId } }
+    });
+}
+}
+

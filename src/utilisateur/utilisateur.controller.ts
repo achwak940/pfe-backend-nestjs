@@ -24,6 +24,10 @@ export class UtilisateurController {
   findAll() {
     return this.utilisateurService.getAllusers();
   }
+  @Get('/search')
+  filtrageUsers(@Query('query') query:string){
+    return this.utilisateurService.searchUsers(query);
+  }
   @Get('/verification')
   verificationToken(@Query('token') token: string) {
     if (!token) {
@@ -54,4 +58,13 @@ export class UtilisateurController {
   remove(@Param('id') id: string) {
     return this.utilisateurService.remove(+id);
   }
+  @Get("/enquetes/:id")
+  findenquetebyuser(@Param('id') id: number){
+   return  this.utilisateurService.findEnquetesByUser(id)
+
+  }
+  @Get('/enquetes/count/:id')
+async getNumberEnquetesByUser(@Param('id') id: number) {
+    return await this.utilisateurService.findNumberEnquetesByUser(id);
+}
 }

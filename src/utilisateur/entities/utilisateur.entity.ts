@@ -1,6 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Role } from "../role.enum";
 import { Status } from "../status.enum";
+import { Enquete } from "src/enquete/entities/enquete.entity";
 @Entity()
 export class Utilisateur {
     @PrimaryGeneratedColumn()
@@ -40,4 +41,6 @@ statut: Status;
     date_creation:Date
     @Column({nullable:true})
     date_modification:Date
+      @OneToMany(() => Enquete, enquete => enquete.user)
+    enquetes: Enquete[];
 }
