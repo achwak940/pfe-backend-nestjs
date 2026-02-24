@@ -61,4 +61,28 @@ async changeStatut(id: number, newStatut: StatusEnquete) {
     enquete.statut = newStatut;
     return this.enqueteRepo.save(enquete);
 }
+async getAllenqueteEnBrullion(){
+  return this.enqueteRepo.find({
+    where:{ statut:StatusEnquete.Brouillon}}
+  )
+}
+async getAllEnqueteFerme(){
+   return this.enqueteRepo.find({
+    where:{ statut:StatusEnquete.Fermee}}
+  )
+}
+async getAllEnquetePubliee(){
+  return this.enqueteRepo.find(
+    {
+      where:{statut:StatusEnquete.Publiee}
+    }
+  )
+}
+async getAllEnqueteArchive(){
+  return this.enqueteRepo.find(
+    {
+      where:{statut:StatusEnquete.archive}
+    }
+  )
+}
 }

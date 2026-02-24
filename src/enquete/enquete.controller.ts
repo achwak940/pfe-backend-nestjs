@@ -42,4 +42,68 @@ changeStatut(
 {
     return this.enqueteService.changeStatut(+id, statut);
 }
+@Get("/all/EnBrullion")
+async findAllEnqueteBrullion() {
+  const allEnqueteBrullion =
+    await this.enqueteService.getAllenqueteEnBrullion();
+
+  if (!allEnqueteBrullion || allEnqueteBrullion.length === 0) {
+    return {
+      message: 'Aucune enquête en brouillon trouvée',
+      data: []
+    };
+  }
+
+  return {
+    message: 'Voici la liste des enquêtes avec le statut brouillon',
+    data: allEnqueteBrullion
+  };
+}
+@Get("/all/Ferme")
+async findAllEnqueteFerme(){
+  const allEnqueteFerme=await this.enqueteService.getAllEnqueteFerme()
+  if(!allEnqueteFerme || allEnqueteFerme.length===0){
+    return {
+      message:'Aucune enquête ferme trouvée',
+      data:[]
+    }
+
+  }
+  return{
+    message:'Voici la liste des enquêtes avec le statut ferme',
+    data:allEnqueteFerme
+  }
+}
+@Get("/all/Publiee")
+async findallEnquetePubliee(){
+  const allEnquetePubliee=await this.enqueteService.getAllEnquetePubliee()
+  if(! allEnquetePubliee ||  allEnquetePubliee.length===0){
+    return{
+      message:"Aucune enquête Publiée trouvée",
+      data:[]
+    }
+
+  }
+  return{
+    message:"Voici liste des enuqêtes avec le statu Publiée",
+    data:allEnquetePubliee
+  }
+
+}
+@Get("/all/Archivee")
+async getallEnqueteArchive(){
+  const allEnqueteArchive=await this.enqueteService.getAllEnqueteArchive()
+  if(!allEnqueteArchive || allEnqueteArchive.length===0){
+    return{
+      message:"Aucune enquête Archivée trouvée",
+      data:[]
+    }
+
+  }
+  return{
+    message:"Voici liste des enuqêtes avec le statu Archivée",
+    data:allEnqueteArchive
+  }
+}
+
 }

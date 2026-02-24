@@ -1,6 +1,7 @@
 export enum StatusEnquete{
          Brouillon = "Brouillon",   
         Publiee = "Publiee",       
-        Fermee = "Fermee" 
+        Fermee = "Fermee" ,
+        archive="Archivée"
 
 }
