@@ -18,7 +18,7 @@ export class EnqueteController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.enqueteService.findOne(+id);
+    return this.enqueteService.findEnqueteByid(+id);
   }
 
   @Patch('/update/:id')

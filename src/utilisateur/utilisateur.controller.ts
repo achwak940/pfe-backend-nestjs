@@ -67,4 +67,52 @@ export class UtilisateurController {
 async getNumberEnquetesByUser(@Param('id') id: number) {
     return await this.utilisateurService.findNumberEnquetesByUser(id);
 }
+@Get('/enquetes/brullion/:id')
+async getAllEnqueteStatuBruillon(@Param('id') id:number){
+
+  const allenqueteBrullion= await this.utilisateurService.findEnqueteAvecStatutBrouillonByUser(id)
+  if(!allenqueteBrullion || allenqueteBrullion.length===0){
+    return{
+      message:"Aucune enquête en brullion trouvée",
+      data:[]
+
+    }
+  }
+    return{
+      message:'Voici liste des enuqêtes avec le statu brullion',
+      data:[allenqueteBrullion]
+    }
+
+}
+@Get('/enquetes/ferme/:id')
+async getAllEnqueteFerme(@Param('id') id:number)
+{
+  const listeEnqueteFerme=await this.utilisateurService.findEnqueteAvecStatutFermeByUser(id)
+  if(!listeEnqueteFerme || listeEnqueteFerme.length===0){
+    return {
+      message:'Aucune enquête fermée trouvée',
+      data:[]
+    }
+  }
+  return{
+    message:'Voici liste des enuqêtes avec le statu fermée',
+    data:listeEnqueteFerme
+  }
+
+}
+@Get('/all/Publiee')
+async getAllEnquetePubliee(@Param('id') id:number){
+  const allEnquetePublie=await this.utilisateurService.findEnqueteAvecStatutPublieeByUser(id)
+  if(!allEnquetePublie||allEnquetePublie.length===0){
+    return {
+      message:'Aucune enquête Publiée trouvée',
+      data:[]
+    }
+
+  }
+return {
+      message:'Voici liste des enuqêtes avec le statu Publiée',
+      data:[]
+    }
+}
 }

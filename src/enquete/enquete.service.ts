@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateEnqueteDto } from './dto/create-enquete.dto';
 import { UpdateEnqueteDto } from './dto/update-enquete.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,11 +11,21 @@ export class EnqueteService {
    }
   create(createEnqueteDto: CreateEnqueteDto) {
     const enquette=this.enqueteRepo.create(createEnqueteDto)
+    if(!createEnqueteDto.titre||createEnqueteDto.titre.trim()===''){
+      throw new BadRequestException('titre est obligatoire')
+    }
+    if(createEnqueteDto.description &&  createEnqueteDto.description?.length<10){
+      throw new BadRequestException("Description doit avoir au moins 10 caractères")
+
+    }
  this.enqueteRepo.save(enquette)
-    return enquette;
+    return {
+        message: 'Enquête créée avec succès',
+        data: enquette
+    };
   }
-  findAll() {
-    return this.enqueteRepo.find(
+  async findAll() {
+   const listeEnquettes =  await this.enqueteRepo.find(
       ({
         order: {
             createAt: 'DESC'  
@@ -23,27 +33,51 @@ export class EnqueteService {
     })
 
     )
+    if(listeEnquettes.length===0){
+      return {
+        message:"aucun enquete trouve"
+      }
+
+    }
+    return listeEnquettes
   }
-  findOne(id: number) {
+  findEnqueteByid(id: number) {
     return this.enqueteRepo.findOne({
       where :{id:id}
     });
   }
 async update(id: number, updateEnqueteDto: UpdateEnqueteDto) {
-    // 1️⃣ Trouver l'enquête existante
-    const enquete = await this.enqueteRepo.findOne({ where: { id } });
-    if (!enquete) {
-        throw new NotFoundException(`Enquete avec id ${id} non trouvée`);
-    }
-    if (updateEnqueteDto.userId) {
-        enquete.user = { id: updateEnqueteDto.userId } as any; 
-    }
-    Object.assign(enquete, updateEnqueteDto);
-    delete (enquete as any).adminId; 
-    return this.enqueteRepo.save(enquete);
+   const enquete=await this.findEnqueteByid(id)
+   if(!enquete){
+    throw new NotFoundException(`Enquete avec id ${id} non trouvée`)
+   }
+   if(updateEnqueteDto.description && updateEnqueteDto.description.length<10){
+      throw new BadRequestException("Description doit avoir au moins 10 caractères")
+   }
+   if(updateEnqueteDto.userId){
+    enquete.user={id:updateEnqueteDto.userId} as any
+   }
+   Object.assign(enquete,updateEnqueteDto)
+   //Empêcher que le champ adminId soit sauvegardé ou modifié par l’utilisateur via update.
+   delete (enquete as any).adminId
+   const updateEnquete=await this.enqueteRepo.save(enquete)
+   return{
+    message:'Enquête mise à jour avec succés',
+    data:updateEnquete
+   }
+
+
 }
-  remove(id: number) {
-    return this.enqueteRepo.delete(id);
+  async remove(id: number) {
+    const enquete= await this.findEnqueteByid(id)
+    if(!enquete){
+  throw new NotFoundException(`Enquete avec id ${id} non trouvée`)
+    }
+    this.enqueteRepo.delete(id)
+    return{
+       message:'Enquête supprimée  avec succés',
+    data: enquete
+    } ;
   }
   //pour return les enquette avec leur utilisateur
   async findByUser(userId: number) {

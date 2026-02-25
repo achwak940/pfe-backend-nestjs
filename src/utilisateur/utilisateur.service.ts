@@ -8,6 +8,7 @@ import { text } from 'stream/consumers';
 import { Status } from './status.enum';
 import { Role } from './role.enum';
 import { Enquete } from 'src/enquete/entities/enquete.entity';
+import { StatusEnquete } from 'src/enquete/entities/status.enum';
 @Injectable()
 export class UtilisateurService {
   constructor(
@@ -166,9 +167,30 @@ async searchUsers(query: string) {
 async findEnquetesByUser(userId: number) {
     return this.enqueteRepo.find({
         where: { user: { id: userId } },
-        relations: ['user'], // charger la relation
         order: { createAt: 'DESC' }
     });
+}
+async findEnqueteAvecStatutBrouillonByUser(userId: number) {
+    return this.enqueteRepo.find({
+        where: { user: { id: userId } ,statut:StatusEnquete.Brouillon},
+        order: { createAt: 'DESC' }
+    });
+}
+async findEnqueteAvecStatutFermeByUser(userId:number){
+  return this.enqueteRepo.find(
+    {
+      where:{user:{id:userId},statut:StatusEnquete.Fermee},
+      order:{createAt:'DESC'}
+    }
+  )
+}
+async findEnqueteAvecStatutPublieeByUser(userId:number){
+  return this.enqueteRepo.find(
+    {
+      where:{user:{id:userId},statut:StatusEnquete.Publiee},
+      order:{createAt:'DESC'}
+    }
+  )
 }
 async findNumberEnquetesByUser(userId: number): Promise<number> {
     return this.enqueteRepo.count({
