@@ -2,6 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "t
 import { StatusEnquete } from "./status.enum";
 import { type } from "os";
 import { Utilisateur } from "src/utilisateur/entities/utilisateur.entity";
+import { TypeParticipation } from "./TypeParticipation.enum";
 @Entity()
 export class Enquete {
     @PrimaryGeneratedColumn()
@@ -17,6 +18,12 @@ export class Enquete {
     })
     statut: StatusEnquete;
     statu:StatusEnquete
+    @Column({
+        type:'enum',
+        enum:TypeParticipation,
+        default:TypeParticipation.connecte
+    })
+    typeParticipation:TypeParticipation
     @Column({ type: "date", default: () => "CURRENT_DATE" })
     createAt:Date
     @Column({ type: "date", nullable: true })
