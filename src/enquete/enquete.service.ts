@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Param } from '@nestjs/common';
 import { CreateEnqueteDto } from './dto/create-enquete.dto';
 import { UpdateEnqueteDto } from './dto/update-enquete.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Enquete } from './entities/enquete.entity';
 import { Repository } from 'typeorm';
 import { StatusEnquete } from './entities/status.enum';
+import { TypeParticipation } from './entities/TypeParticipation.enum';
 @Injectable()
 export class EnqueteService {
    constructor(@InjectRepository(Enquete) private enqueteRepo: Repository<Enquete>){
@@ -65,8 +66,6 @@ async update(id: number, updateEnqueteDto: UpdateEnqueteDto) {
     message:'Enquête mise à jour avec succés',
     data:updateEnquete
    }
-
-
 }
   async remove(id: number) {
     const enquete= await this.findEnqueteByid(id)
@@ -118,5 +117,21 @@ async getAllEnqueteArchive(){
       where:{statut:StatusEnquete.archive}
     }
   )
+}
+
+  async changeTypedeParticipation(id:number,type:TypeParticipation){
+  const rechEnquete=await this.findEnqueteByid(id)
+  if(!rechEnquete){
+     throw new NotFoundException(`Enquete avec id ${id} non trouvée`)
+    
+  }
+  rechEnquete.typeParticipation=type
+  const updateEnquete = await this.enqueteRepo.save(rechEnquete);
+
+  return {
+    message: "Type de participation changé avec succès",
+    data: updateEnquete, 
+  };
+  
 }
 }

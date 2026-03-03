@@ -8,6 +8,10 @@ import { Utilisateur } from './utilisateur/entities/utilisateur.entity';
 import { AuthentificationModule } from './authentification/authentification.module';
 import { EnqueteModule } from './enquete/enquete.module';
 import { Enquete } from './enquete/entities/enquete.entity';
+import { QuestionModule } from './question/question.module';
+import { Question } from './question/entities/question.entity';
+import { OptionModule } from './option/option.module';
+import { Option } from './option/entities/option.entity';
 
 @Module({
   imports: [  
@@ -22,13 +26,15 @@ import { Enquete } from './enquete/entities/enquete.entity';
         username:ConfigService.get("DB_USERNAME"),
         password:ConfigService.get("DB_PASSWORD"),
         database:ConfigService.get("DB_NAME"),
-        entities:[Utilisateur,Enquete],
+        entities:[Utilisateur,Enquete,Question,Option],
         synchronize:true,//creation auto de table si n'existe pas 
       })
     }),
     UtilisateurModule,
     AuthentificationModule,
-    EnqueteModule
+    EnqueteModule,
+    QuestionModule,
+    OptionModule
   ],
   controllers: [AppController],
   providers: [AppService],

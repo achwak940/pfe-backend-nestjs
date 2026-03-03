@@ -3,6 +3,7 @@ import { EnqueteService } from './enquete.service';
 import { CreateEnqueteDto } from './dto/create-enquete.dto';
 import { UpdateEnqueteDto } from './dto/update-enquete.dto';
 import { StatusEnquete } from './entities/status.enum';
+import { TypeParticipation } from './entities/TypeParticipation.enum';
 @Controller('enquete')
 export class EnqueteController {
   constructor(private readonly enqueteService: EnqueteService) {}
@@ -105,5 +106,8 @@ async getallEnqueteArchive(){
     data:allEnqueteArchive
   }
 }
-
+@Patch("/changeTypeParticipation/:id")
+  changeTypeParticipation(@Param('id') id: number, @Body('typeParticipation') type:TypeParticipation) {
+    return this.enqueteService.changeTypedeParticipation(id,type)
+  }
 }
