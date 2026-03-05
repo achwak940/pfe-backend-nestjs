@@ -1,8 +1,9 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { StatusEnquete } from "./status.enum";
 import { type } from "os";
 import { Utilisateur } from "src/utilisateur/entities/utilisateur.entity";
 import { TypeParticipation } from "./TypeParticipation.enum";
+import { Question } from "src/question/entities/question.entity";
 @Entity()
 export class Enquete {
     @PrimaryGeneratedColumn()
@@ -31,4 +32,7 @@ export class Enquete {
     @ManyToOne(() => Utilisateur, user => user.enquetes)
     @JoinColumn({ name: 'userId' }) // <-- ça relie correctement la colonne userId
     user: Utilisateur;
+  @ManyToMany(() => Question, (question) => question.enquetes)
+@JoinTable() // dima tet7at fi côté wa7ed bark
+questions: Question[];
 }

@@ -1,1 +1,4 @@
-export class CreateOptionDto {}
+export class CreateOptionDto {
+    texte:string
+    order:number
+}

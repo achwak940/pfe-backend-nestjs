@@ -1,6 +1,7 @@
+import { Enquete } from "src/enquete/entities/enquete.entity";
 import { Option } from "src/option/entities/option.entity";
 import { text } from "stream/consumers";
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class Question {
@@ -20,6 +21,8 @@ export class Question {
         update_at:Date
           @OneToMany(() => Option, option => option.question, { cascade: true })
   options: Option[];
+  @ManyToMany(() => Enquete, (enquete) => enquete.questions)
+enquetes: Enquete[];
 
        
 }
