@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, BadRequestException } from '@nestjs/common';
 import { EnqueteService } from './enquete.service';
 import { CreateEnqueteDto } from './dto/create-enquete.dto';
 import { UpdateEnqueteDto } from './dto/update-enquete.dto';
@@ -110,4 +110,56 @@ async getallEnqueteArchive(){
   changeTypeParticipation(@Param('id') id: number, @Body('typeParticipation') type:TypeParticipation) {
     return this.enqueteService.changeTypedeParticipation(id,type)
   }
+  @Get("participants/:userId")
+  async getNombreuserByAdmin(@Param('userId')userId:number){
+    return this.enqueteService.getNombreParticipantByAdmin(userId)
+  }
+@Get('taux-reponse-admin/:userId')
+async getTauxReponseAdmin(@Param('userId') userId: string) {
+  const id = parseInt(userId);
+  if (isNaN(id)) {
+    throw new BadRequestException('UserId invalide');
+  }
+  return {
+    taux_reponse: await this.enqueteService.getTauxReponseByAdmin(id)
+  };
+}
+@Get(':id/stats')
+async getEnqueteStats(@Param('id') id: string) {
+  return this.enqueteService.getEnqueteStats(+id);
+}
+
+@Get(':id/evolution')
+async getEvolutionReponses(@Param('id') id: string) {
+  return this.enqueteService.getEvolutionReponses(+id);
+}
+
+@Get(':id/question/:questionId/reponses')
+async getReponsesByQuestion(
+  @Param('id') id: string,
+  @Param('questionId') questionId: string
+) {
+  return this.enqueteService.getReponsesByQuestion(+id, +questionId);
+}
+
+@Get(':id/qrcode')
+async generateQRCode(@Param('id') id: string) {
+  const qrBuffer = await this.enqueteService.generateQRCode(+id);
+  return new Response(qrBuffer, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Content-Disposition': `attachment; filename="qrcode_enquete_${id}.png"`
+    }
+  });
+}
+
+@Patch(':id/publier')
+async publishEnquete(@Param('id') id: string) {
+  return this.enqueteService.changeStatut(+id, StatusEnquete.Publiee);
+}
+
+@Patch(':id/archiver')
+async archiveEnquete(@Param('id') id: string) {
+  return this.enqueteService.changeStatut(+id, StatusEnquete.archive);
+}
 }

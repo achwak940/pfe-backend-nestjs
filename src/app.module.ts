@@ -12,6 +12,11 @@ import { QuestionModule } from './question/question.module';
 import { Question } from './question/entities/question.entity';
 import { OptionModule } from './option/option.module';
 import { Option } from './option/entities/option.entity';
+import { ReponseModule } from './reponse/reponse.module';
+import { Reponse } from './reponse/entities/reponse.entity';
+import { YoloModule } from './yolo/yolo.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { Feedback } from './feedback/entities/feedback.entity';
 
 @Module({
   imports: [  
@@ -26,7 +31,7 @@ import { Option } from './option/entities/option.entity';
         username:ConfigService.get("DB_USERNAME"),
         password:ConfigService.get("DB_PASSWORD"),
         database:ConfigService.get("DB_NAME"),
-        entities:[Utilisateur,Enquete,Question,Option],
+        entities:[Utilisateur,Enquete,Question,Option,Reponse,Feedback],
         synchronize:true,//creation auto de table si n'existe pas 
       })
     }),
@@ -34,7 +39,10 @@ import { Option } from './option/entities/option.entity';
     AuthentificationModule,
     EnqueteModule,
     QuestionModule,
-    OptionModule
+    OptionModule,
+    ReponseModule,
+    YoloModule,
+    FeedbackModule
   ],
   controllers: [AppController],
   providers: [AppService],

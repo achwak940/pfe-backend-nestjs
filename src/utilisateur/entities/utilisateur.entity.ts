@@ -2,6 +2,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Role } from "../role.enum";
 import { Status } from "../status.enum";
 import { Enquete } from "src/enquete/entities/enquete.entity";
+import { Feedback } from "src/feedback/entities/feedback.entity";
 @Entity()
 export class Utilisateur {
     @PrimaryGeneratedColumn()
@@ -12,6 +13,10 @@ export class Utilisateur {
     nom:string
     @Column({unique:true})
     email:string
+    @Column({nullable:true,length:8})
+    telephone:string
+    @Column({nullable:true})
+    photo_profil:string;
     @Column()
     mot_de_passe:string
     @Column({
@@ -43,4 +48,6 @@ statut: Status;
     date_modification:Date
       @OneToMany(() => Enquete, enquete => enquete.user)
     enquetes: Enquete[];
+     @OneToMany(() => Feedback, feedback => feedback.utilisateur)
+  feedbacks: Feedback[];
 }

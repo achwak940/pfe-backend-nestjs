@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
 import { QuestionService } from './question.service';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
@@ -6,14 +6,17 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 @Controller('question')
 export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}
+  
   @Post()
   create(@Body() createQuestionDto: CreateQuestionDto) {
     return this.questionService.create(createQuestionDto);
   }
+  
   @Get('all')
   findAll() {
     return this.questionService.getAllQuestions();
   }
+  
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.questionService.findOne(+id);
@@ -24,17 +27,26 @@ export class QuestionController {
     return this.questionService.update(+id, updateQuestionDto);
   }
 
-  @Delete(':id')
+  @Delete('/remove/:id')
   remove(@Param('id') id: string) {
     return this.questionService.remove(+id);
   }
+  
   @Get('user/:id/question')
-  findQestionUser(@Param('id') id:number){
-    return this.questionService.getQuestionUser(id)
-
+  findQestionUser(@Param('id', ParseIntPipe) id: number) {
+    return this.questionService.getQuestionUser(id);
   }
+  
   @Post('/add/options')
-  addQuestion(@Body()dto:CreateQuestionDto){
-    return this.questionService.ajoutQuestionAvecOption(dto)
+  addQuestion(@Body() dto: CreateQuestionDto) {
+    return this.questionService.ajoutQuestionAvecOption(dto);
+  }
+  
+  @Patch('/modifierQuestion/:id')
+  modifierQuestion(
+    @Body() dto: UpdateQuestionDto,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.questionService.modifierQuestion(dto, id);
   }
 }

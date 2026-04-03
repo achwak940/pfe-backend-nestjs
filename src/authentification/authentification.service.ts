@@ -34,7 +34,7 @@ export class AuthentificationService {
           if(!utilisateur.est_verifie){
             return {erreur:"Votre compte n'est pas vérifié. Veuillez vérifier votre email."}
           }
-          const user= { id: utilisateur.id, email: utilisateur.email, role: utilisateur.role ,prenom: utilisateur.prenom, nom: utilisateur.nom};
+          const user= { id: utilisateur.id, email: utilisateur.email, role: utilisateur.role ,prenom: utilisateur.prenom, nom: utilisateur.nom,photo_profil:utilisateur.photo_profil};
           const token = this.jwtService.sign(user);
          
           
