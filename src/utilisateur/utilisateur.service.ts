@@ -26,97 +26,113 @@ export class UtilisateurService {
     @InjectRepository(Enquete) private enqueteRepo: Repository<Enquete>,
     @InjectRepository(Reponse) private reponseRepo: Repository<Reponse>,
   ) {}
-  async create(createUtilisateurDto: CreateUtilisateurDto) {
-    const prenom = createUtilisateurDto.prenom;
-    const nom = createUtilisateurDto.nom;
-    const email = createUtilisateurDto.email;
-    const mot_de_passe = createUtilisateurDto.mot_de_passe;
-    if (!prenom?.trim()) {
-      return { erreur: 'Le prenom est obligatoire' };
-    }
-    if (!nom?.trim()) {
-      return { erreur: 'Le nom est obligatoire' };
-    }
-    if (!email?.trim()) {
-      return { erreur: "L'email est obligatoire" };
-    }
-    if (!mot_de_passe?.trim()) {
-      return { erreur: 'Le mot de passe est obligatoire' };
-    }
-    if (!email.includes('@')) {
-      return { erreur: "L'email doit contenir @" };
-    }
-    if (!email.includes('.')) {
-      return { erreur: "L'email doit contenir ." };
-    }
-    if (email.indexOf('@') == 0) {
-      return { erreur: "L'email doit contenir des caractères avant @" };
-    }
-    if (email.lastIndexOf('.') == email.length - 1) {
-      return { erreur: "L'email doit contenir des caractères après ." };
-    }
-    if (mot_de_passe.length < 8) {
-      return { erreur: 'Le mot de passe doit contenir au moins 8 caractères' };
-    }
-    if (!/[A-Z]/.test(mot_de_passe)) {
-      return { erreur: 'Le mot de passe doit contenir au moins une majuscule' };
-    }
-    if (!/[0-9]/.test(mot_de_passe)) {
-      return { erreur: 'Le mot de passe doit contenir au moins un chiffre' };
-    }
-    if (!/[@$!%*?&]/.test(mot_de_passe)) {
-      return {
-        erreur:
-          'Le mot de passe doit contenir au moins un caractère spécial (@$!%*?&)',
-      };
-    }
-    if (await this.utilisateurRepository.findOne({ where: { email } })) {
-      return { erreur: "L'email existe déjà" };
-    }
-    const bcrypt = require('bcrypt');
-    const mot_de_passe_hache = await bcrypt.hash(mot_de_passe, 10);
-    const token = require('crypto').randomBytes(16).toString('hex');
-    const token_expiration = new Date(Date.now() + 5 * 60 * 1000); // le token expire dans 5 minutes
-    const utilisateur = this.utilisateurRepository.create({
-      prenom,
-      nom,
-      email,
-      mot_de_passe: mot_de_passe_hache,
-      code_verification: token,
-      token_expiration: token_expiration,
-      statut: Status.INACTIF,
-    });
-    await this.utilisateurRepository.save(utilisateur);
-    const lienverification = `https://intactly-leal-beverley.ngrok-free.dev/utilisateur/verification?token=${token}`;
-    //creation du mail
-    const creationemail = {
-      from: 'belliliachwek@gmail.com',
-      to: email,
-      subject: 'Vérification de votre compte',
-      html: `<p>Bonjour ${prenom},</p>
-    <p>Veuillez cliquer sur le lien suivant pour vérifier votre compte : <a href="${lienverification}">Vérifier mon compte</a></p>
-    <p>Ce lien exprie dans 5 minutes.</p>
-    <p>Si vous n'avez pas créé de compte, veuillez ignorer cet email.</p>`,
+async create(
+  createUtilisateurDto: CreateUtilisateurDto,
+  file?: Express.Multer.File,
+) {
+  const { prenom, nom, email, mot_de_passe } = createUtilisateurDto;
+
+  // ================= VALIDATION =================
+  if (!prenom?.trim()) return { erreur: 'Le prenom est obligatoire' };
+  if (!nom?.trim()) return { erreur: 'Le nom est obligatoire' };
+  if (!email?.trim()) return { erreur: "L'email est obligatoire" };
+  if (!mot_de_passe?.trim()) return { erreur: 'Le mot de passe est obligatoire' };
+
+  if (!email.includes('@')) return { erreur: "L'email doit contenir @" };
+  if (!email.includes('.')) return { erreur: "L'email doit contenir ." };
+  if (email.indexOf('@') === 0)
+    return { erreur: "L'email doit contenir des caractères avant @" };
+  if (email.lastIndexOf('.') === email.length - 1)
+    return { erreur: "L'email doit contenir des caractères après ." };
+
+  if (mot_de_passe.length < 8)
+    return { erreur: 'Le mot de passe doit contenir au moins 8 caractères' };
+
+  if (!/[A-Z]/.test(mot_de_passe))
+    return { erreur: 'Le mot de passe doit contenir au moins une majuscule' };
+
+  if (!/[0-9]/.test(mot_de_passe))
+    return { erreur: 'Le mot de passe doit contenir au moins un chiffre' };
+
+  if (!/[@$!%*?&]/.test(mot_de_passe))
+    return {
+      erreur: 'Le mot de passe doit contenir au moins un caractère spécial',
     };
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'belliliachwek@gmail.com',
-        pass: 'ujgu vylh uuiz yhzh',
-      },
-    });
-    //envoi du mail
-    try {
-      await transporter.sendMail(creationemail);
-    } catch (error) {
-      console.error(
-        "Erreur lors de l'envoi de l'email de vérification :",
-        error,
-      );
-    }
-    return { message: 'Utilisateur créé avec succès' };
+
+  // ================= CHECK EMAIL =================
+  const exist = await this.utilisateurRepository.findOne({
+    where: { email },
+  });
+
+  if (exist) return { erreur: "L'email existe déjà" };
+
+  // ================= IMAGE PROFILE =================
+  let photo_profil: string | undefined = undefined;
+  if (file) {
+    photo_profil = `/uploads/profiles/${file.filename}`;
   }
+
+  // ================= HASH PASSWORD =================
+  const bcrypt = require('bcrypt');
+  const crypto = require('crypto');
+
+  const mot_de_passe_hache = await bcrypt.hash(mot_de_passe, 10);
+
+  // ================= TOKEN =================
+  const token = crypto.randomBytes(16).toString('hex');
+  const token_expiration = new Date(Date.now() + 5 * 60 * 1000);
+
+  // ================= CREATE USER =================
+  const utilisateur = this.utilisateurRepository.create({
+    prenom,
+    nom,
+    email,
+    mot_de_passe: mot_de_passe_hache,
+    code_verification: token,
+    token_expiration,
+    statut: Status.INACTIF,
+    photo_profil,
+  });
+
+  await this.utilisateurRepository.save(utilisateur);
+
+  // ================= EMAIL =================
+  const lienverification = `https://intactly-leal-beverley.ngrok-free.dev/utilisateur/verification?token=${token}`;
+
+  const creationemail = {
+    from: 'belliliachwek@gmail.com',
+    to: email,
+    subject: 'Vérification de votre compte',
+    html: `
+      <p>Bonjour ${prenom},</p>
+      <p>Veuillez cliquer sur le lien suivant pour vérifier votre compte :</p>
+      <a href="${lienverification}">Vérifier mon compte</a>
+      <p>Ce lien expire dans 5 minutes.</p>
+      <p>Si vous n'avez pas créé de compte, ignorez cet email.</p>
+    `,
+  };
+
+  const nodemailer = require('nodemailer');
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'belliliachwek@gmail.com',
+      pass: 'ujgu vylh uuiz yhzh',
+    },
+  });
+
+  try {
+    await transporter.sendMail(creationemail);
+  } catch (error) {
+    console.error("Erreur email:", error);
+  }
+
+  return {
+    message: 'Utilisateur créé avec succès',
+    photo_profil,
+  };
+}
   async verificationToken(token: string) {
     const utilisateur = await this.utilisateurRepository.findOne({
       where: { code_verification: token },

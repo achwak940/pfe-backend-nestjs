@@ -9,6 +9,8 @@ import {
   Post,
   Query,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import express from 'express';
 import { Status } from './status.enum';
@@ -17,6 +19,9 @@ import { UpdateUtilisateurDto } from './dto/update-utilisateur.dto';
 import { UtilisateurService } from './utilisateur.service';
 import { CreateUtilisateurDto } from './dto/create-utilisateur.dto';
 import express_1 from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { extname } from 'path/win32';
+import { diskStorage } from 'multer';
 @Controller('utilisateur')
 export class UtilisateurController {
     @Get('/NombreUsers')
@@ -36,11 +41,26 @@ export class UtilisateurController {
 
     res.send(csv);
   }
-  @Post('/register')
-  create(@Body() createUtilisateurDto: CreateUtilisateurDto) {
-    return this.utilisateurService.create(createUtilisateurDto);
-  }
+@Post('/register')
+@UseInterceptors(
+  FileInterceptor('photo_profil', {
+    storage: diskStorage({
+      destination: './uploads/profiles',
+      filename: (req, file, cb) => {
+        const uniqueName =
+          Date.now() + '-' + Math.round(Math.random() * 1e9);
 
+        cb(null, uniqueName + extname(file.originalname));
+      },
+    }),
+  }),
+)
+create(
+  @Body() createUtilisateurDto: CreateUtilisateurDto,
+  @UploadedFile() file: Express.Multer.File,
+) {
+  return this.utilisateurService.create(createUtilisateurDto, file);
+}
   @Get('/get/all')
   findAll() {
     return this.utilisateurService.getAllusers();

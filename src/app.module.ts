@@ -17,6 +17,7 @@ import { Reponse } from './reponse/entities/reponse.entity';
 import { YoloModule } from './yolo/yolo.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { Feedback } from './feedback/entities/feedback.entity';
+import { AiQuestionsModule } from './GenerationQuestions/ai-questions/ai-questions.module';
 
 @Module({
   imports: [  
@@ -42,7 +43,8 @@ import { Feedback } from './feedback/entities/feedback.entity';
     OptionModule,
     ReponseModule,
     YoloModule,
-    FeedbackModule
+    FeedbackModule,
+    AiQuestionsModule
   ],
   controllers: [AppController],
   providers: [AppService],

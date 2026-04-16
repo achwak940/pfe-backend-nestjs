@@ -22,7 +22,7 @@ async function bootstrap() {
   
   // ⚠️ CHANGEZ CETTE LIGNE ⚠️
   // Avant : await app.listen(process.env.PORT ?? 3000);
-  // Après :
+  // Après :w
   await app.listen(3000, '0.0.0.0'); // Écoute sur toutes les interfaces
   
   console.log('🚀 Serveur démarré sur:');

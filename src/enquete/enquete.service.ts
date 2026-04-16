@@ -213,22 +213,23 @@ async getAllEnqueteArchive(){
   };
   
 }
-async getAllEnqueteByDetailesQuestions(){
-  const listeEnquettes =  await this.enqueteRepo.find(
-      ({
-        order: {
-            createAt: 'DESC'  
-        }
-    })
+async getEnqueteByDetailesQuestions(id: number) {
+  const enquete = await this.enqueteRepo.findOne({
+    where: { id },
+    relations: ['questions', 'questions.options'],
+  });
 
-    )
-    if(listeEnquettes.length===0){
-      return {
-        message:"aucun enquete trouve"
-      }
+  if (!enquete) {
+    return {
+      message: "Enquête non trouvée",
+      data: null
+    };
+  }
 
-    }
-    return listeEnquettes
+  return {
+    message: "Enquête trouvée avec succès",
+    data: enquete
+  };
 }
 async getNombreParticipantByAdmin(userId:number){
   const resultat = await this.enqueteRepo.query(
@@ -391,4 +392,18 @@ async generateQRCode(id: number) {
   
   return qrCodeBuffer;
 }
+async submitEnquete(enqueteId: number, answers: any[]) {
+  for (const ans of answers) {
+    await this.enqueteRepo.query(
+      `INSERT INTO reponse ("enquete_id", "question_id", "reponseTexte", "dateReponse")
+       VALUES ($1, $2, $3, NOW())`,
+      [enqueteId, ans.questionId, ans.response]
+    );
+  }
+
+  return {
+    message: "Réponses enregistrées avec succès"
+  };
+}
+
 }

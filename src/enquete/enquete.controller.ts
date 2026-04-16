@@ -162,4 +162,15 @@ async publishEnquete(@Param('id') id: string) {
 async archiveEnquete(@Param('id') id: string) {
   return this.enqueteService.changeStatut(+id, StatusEnquete.archive);
 }
+@Get('/detailes/:id')
+getOneWithQuestions(@Param('id') id: string) {
+  return this.enqueteService.getEnqueteByDetailesQuestions(+id);
+}
+@Post('submit/:id')
+submitEnquete(
+  @Param('id') id: string,
+  @Body() body: { answers: any[] }
+) {
+  return this.enqueteService.submitEnquete(+id, body.answers);
+}
 }
