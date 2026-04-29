@@ -5,8 +5,9 @@ import { Utilisateur } from './entities/utilisateur.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Enquete } from 'src/enquete/entities/enquete.entity';
 import { Reponse } from 'src/reponse/entities/reponse.entity';
+import { Reclamation } from 'src/reclamation/entities/reclamation.entity';
 @Module({
-  imports:[TypeOrmModule.forFeature([Utilisateur,Enquete,Reponse])],
+  imports:[TypeOrmModule.forFeature([Utilisateur,Enquete,Reponse,Reclamation])],
   controllers: [UtilisateurController],
   providers: [UtilisateurService],
 })

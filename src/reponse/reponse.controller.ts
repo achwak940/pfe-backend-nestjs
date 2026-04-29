@@ -172,7 +172,7 @@ export class ReponseController {
   async getRecentActivities(
     @Param('id') id: string,
     @Query('limit') limit: string = '5'
-  ) {
+  ) { 
     return this.reponseService.getRecentActivities(+id, +limit);
   }
-}
+}  

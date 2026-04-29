@@ -63,76 +63,26 @@ export class AiQuestionsService {
     const emotionPatterns = {
       positive: {
         keywords: [
-          'good',
-          'great',
-          'excellent',
-          'happy',
-          'satisfied',
-          'love',
-          'like',
-          'amazing',
-          'wonderful',
-          'fantastic',
-          'perfect',
-          'awesome',
-          'super',
-          'bien',
-          'bon',
-          'génial',
-          'satisfait',
-          'parfait',
-          'cool',
-          'nice',
-          'content',
-          'heureux',
-          'merci',
-          'bravo',
+          'good', 'great', 'excellent', 'happy', 'satisfied', 'love', 'like',
+          'amazing', 'wonderful', 'fantastic', 'perfect', 'awesome', 'super',
+          'bien', 'bon', 'génial', 'satisfait', 'parfait', 'cool', 'nice',
+          'content', 'heureux', 'merci', 'bravo'
         ],
         weight: 1.5,
       },
       negative: {
         keywords: [
-          'bad',
-          'poor',
-          'dissatisfied',
-          'unhappy',
-          'terrible',
-          'hate',
-          'dislike',
-          'awful',
-          'worst',
-          'horrible',
-          'mauvais',
-          'mécontent',
-          'déçu',
-          'horrible',
-          'frustrated',
-          'angry',
-          'disappointed',
-          'lent',
-          'crash',
-          'bug',
-          'problème',
-          'difficile',
-          'nul',
+          'bad', 'poor', 'dissatisfied', 'unhappy', 'terrible', 'hate', 'dislike',
+          'awful', 'worst', 'horrible', 'mauvais', 'mécontent', 'déçu',
+          'frustrated', 'angry', 'disappointed', 'lent', 'crash', 'bug',
+          'problème', 'difficile', 'nul'
         ],
         weight: 1.5,
       },
       confused: {
         keywords: [
-          '?',
-          'help',
-          'confused',
-          'not sure',
-          'maybe',
-          'perhaps',
-          'peut-être',
-          'je sais pas',
-          'incertain',
-          'flou',
-          'comprends pas',
-          'explique',
-          'clarification',
+          '?', 'help', 'confused', 'not sure', 'maybe', 'perhaps', 'peut-être',
+          'je sais pas', 'incertain', 'flou', 'comprends pas', 'explique', 'clarification'
         ],
         weight: 1.2,
       },
@@ -153,12 +103,9 @@ export class AiQuestionsService {
         }
       }
 
-      // Bonus pour les émojis
       if (text.match(/[😊😍👍🎉✨]/) && emotion === 'positive') score += 2;
       if (text.match(/[😢😡👎💔]/) && emotion === 'negative') score += 2;
       if (text.match(/[😕🤔❓]/) && emotion === 'confused') score += 2;
-
-      // Bonus pour la longueur
       if (emotion === 'confused' && text.length < 15) score += 1;
 
       if (score > maxScore) {
@@ -169,133 +116,151 @@ export class AiQuestionsService {
     }
 
     const confidence = Math.min(maxScore / 5, 0.95);
-
-    return {
-      emotion: detectedEmotion,
-      confidence,
-      keywords: detectedKeywords,
-    };
+    return { emotion: detectedEmotion, confidence, keywords: detectedKeywords };
   }
 
-  // Construction du prompt dynamique complet
-  private buildDynamicAdaptivePrompt(
-    theme: string,
-    history: string,
-    lastAnswer: string,
-    emotionAnalysis: {
-      emotion: string;
-      confidence: number;
-      keywords: string[];
-    },
-    userLanguage: string,
-    previousQuestions: string[] = [],
-  ): string {
-    const languageInstruction = this.getLanguageInstruction(userLanguage);
+  // ✅ MÉTHODE PRINCIPALE CORRIGÉE - Génération de texte
+  async generateTextQuestion(prompt: string, lang?: string): Promise<string> {
+    this.logger.log(`📝 Generating question for: ${prompt}`);
+    
+    const language = lang || this.detectLanguage(prompt);
+    
+    const languageInstruction = {
+      fr: "Génère une question de sondage en français. La question doit être claire, précise et pertinente. Retourne UNIQUEMENT la question, sans explication.",
+      en: "Generate a survey question in English. The question must be clear, precise and relevant. Return ONLY the question, no explanation.",
+      ar: "قم بإنشاء سؤال استبيان باللغة العربية. يجب أن يكون السؤال واضحًا ودقيقًا وذو صلة. قم بإرجاع السؤال فقط، بدون تفسير.",
+      tn: "Generate a survey question in Tunisian dialect. The question must be clear and relevant. Return ONLY the question, no explanation."
+    };
+    
+    try {
+      const completion = await this.groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: languageInstruction[language] || languageInstruction['fr']
+          },
+          {
+            role: 'user',
+            content: `Sujet: ${prompt}\n\nGénère une question de sondage professionnelle sur ce sujet.`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+      });
 
-    // Construire l'historique formaté
-    const formattedHistory = history || 'Aucune réponse précédente';
-
-    // Suggestions basées sur l'émotion
-    let emotionGuidance = '';
-    let suggestedIntents = '';
-
-    switch (emotionAnalysis.emotion) {
-      case 'positive':
-        emotionGuidance = `L'utilisateur est TRÈS SATISFAIT (confiance: ${(emotionAnalysis.confidence * 100).toFixed(0)}%). 
-          Mots-clés détectés: ${emotionAnalysis.keywords.join(', ')}.
-          → Générer une question sur: ce qu'il/elle a le plus aimé, les fonctionnalités préférées, ce qui pourrait être encore amélioré.`;
-        suggestedIntents = 'satisfaction, improvement_suggestion';
-        break;
-      case 'negative':
-        emotionGuidance = `L'utilisateur est MÉCONTENT ou FRUSTRÉ (confiance: ${(emotionAnalysis.confidence * 100).toFixed(0)}%). 
-          Mots-clés détectés: ${emotionAnalysis.keywords.join(', ')}.
-          → Générer une question sur: les problèmes rencontrés, les points de friction, ce qui pourrait être amélioré.`;
-        suggestedIntents = 'problem, frustration, improvement_needed';
-        break;
-      case 'confused':
-        emotionGuidance = `L'utilisateur est PERDU ou INCERTAIN (confiance: ${(emotionAnalysis.confidence * 100).toFixed(0)}%). 
-          → Générer une question pour: clarifier sa pensée, reformuler, proposer des options, aider à comprendre.`;
-        suggestedIntents = 'clarification, help, guidance';
-        break;
-      default:
-        emotionGuidance = `L'utilisateur est NEUTRE (confiance: ${(emotionAnalysis.confidence * 100).toFixed(0)}%).
-          → Générer une question pour: explorer plus profondément, découvrir ses besoins, comprendre ses attentes.`;
-        suggestedIntents = 'explore, discover, understand';
+      let question = completion.choices[0]?.message?.content || '';
+      
+      question = question
+        .replace(/^["']|["']$/g, '')
+        .replace(/^Question: /i, '')
+        .replace(/^Sondage: /i, '')
+        .trim();
+      
+      if (!question) {
+        question = this.getFallbackQuestionText(prompt, language);
+      }
+      
+      this.logger.log(`✅ Generated: ${question.substring(0, 100)}...`);
+      return question;
+      
+    } catch (error) {
+      this.logger.error(`❌ Generation error: ${error.message}`);
+      return this.getFallbackQuestionText(prompt, language);
     }
-
-    // Éviter la répétition
-    const avoidQuestions =
-      previousQuestions.length > 0
-        ? `ÉVITER de répéter ces questions: ${previousQuestions.map((q) => `"${q}"`).join(', ')}`
-        : 'Aucune question précédente à éviter.';
-
-    return `
-${languageInstruction}
-
-Tu es un EXPERT en création de sondages adaptatifs et en analyse émotionnelle.
-
-### CONTEXTE COMPLET:
-Thème du sondage: "${theme}"
-Historique des réponses:
-${formattedHistory}
-
-DERNIÈRE RÉPONSE DE L'UTILISATEUR: "${lastAnswer}"
-
-### ANALYSE ÉMOTIONNELLE AUTOMATIQUE:
-${emotionGuidance}
-
-### RÈGLES STRICTES:
-1. 🎯 Générer UNE SEULE question courte (max 20 mots)
-2. 🧠 Adapter la question à l'émotion détectée
-3. 💬 Être naturel et conversationnel
-4. 🚫 ${avoidQuestions}
-5. 📊 Aller PLUS PROFOND dans l'opinion de l'utilisateur
-6. 🎨 Proposer un type de question adapté (text, single_choice, rating, scale)
-
-### FORMAT DE SORTIE (JSON UNIQUEMENT - sans markdown):
-{
-  "question": "ta question générée ici",
-  "emotion": "${emotionAnalysis.emotion}",
-  "intent": "satisfaction|problem|clarification|explore",
-  "suggestedQuestionType": "text|single_choice|rating|scale",
-  "confidence": ${emotionAnalysis.confidence}
-}
-
-### EXEMPLES DYNAMIQUES:
-Dernière réponse: "J'adore l'application, elle est super rapide !" (émotion: positive)
-→ {"question": "Quelle fonctionnalité utilisez-vous le plus souvent ?", "emotion": "positive", "intent": "satisfaction", "suggestedQuestionType": "single_choice", "confidence": 0.9}
-
-Dernière réponse: "L'appli rame beaucoup et plante tout le temps" (émotion: negative)
-→ {"question": "À quel moment précis rencontrez-vous ces lenteurs ?", "emotion": "negative", "intent": "problem", "suggestedQuestionType": "text", "confidence": 0.85}
-
-Dernière réponse: "Je sais pas trop quoi dire..." (émotion: confused)
-→ {"question": "Qu'est-ce qui vous semble le plus important pour vous ?", "emotion": "confused", "intent": "clarification", "suggestedQuestionType": "single_choice", "confidence": 0.75}
-
-Génère MAINTENANT la question adaptée (JSON uniquement):
-`;
   }
 
-  private getLanguageInstruction(lang: string): string {
-    const instructions = {
-      tn: `إنت خبير في الاستبيانات الذكية. تحكي باللهجة التونسية (دارجة). 
-      أسئلتك تكون واضحة وقصيرة ومفهومة بالدارجة التونسية.`,
-
-      ar: `أنت خبير في إنشاء استبيانات ذكية. أجب باللغة العربية الفصحى.
-      أسئلتك واضحة ومباشرة وتتناسب مع مشاعر المستخدم.`,
-
-      fr: `Tu es un expert en création de sondages intelligents. Réponds en français.
-      Tes questions sont courtes, claires et adaptées à l'émotion de l'utilisateur.`,
-
-      en: `You are an expert in intelligent survey creation. Respond in English.
-      Your questions are short, clear, and adapted to the user's emotion.`,
+  private getFallbackQuestionText(prompt: string, language: string): string {
+    const fallbacks = {
+      fr: `Comment évaluez-vous votre expérience avec ${prompt} ?`,
+      en: `How do you rate your experience with ${prompt}?`,
+      ar: `كيف تقيم تجربتك مع ${prompt}؟`,
+      tn: `شنو رايك في ${prompt}؟`
     };
-
-    return (
-      instructions[lang as keyof typeof instructions] || instructions['en']
-    );
+    return fallbacks[language] || fallbacks['fr'];
   }
 
-  // Méthode principale dynamique
+  // ✅ MÉTHODE POUR LE CHATBOT
+  async simpleChat(
+    message: string,
+    language: string = 'fr'
+  ): Promise<{ response: string; emotion: string; confidence: number }> {
+    this.logger.log(`💬 Chat request: ${message}`);
+    
+    const detectedLang = language || this.detectLanguage(message);
+    const emotionAnalysis = this.analyzeEmotion(message);
+    
+    const systemPrompt = {
+      fr: `Tu es un assistant expert en création de sondages. 
+      Tu aides les utilisateurs à générer des questions pour leurs enquêtes.
+      Réponds de manière amicale et professionnelle en français.
+      Propose des suggestions pertinentes basées sur le message de l'utilisateur.
+      Si l'utilisateur demande de générer une question, fais-le immédiatement.`,
+      
+      en: `You are an expert survey creation assistant.
+      You help users generate questions for their surveys.
+      Respond in a friendly and professional manner in English.
+      Provide relevant suggestions based on the user's message.
+      If the user asks to generate a question, do it immediately.`,
+      
+      ar: `أنت مساعد خبير في إنشاء الاستبيانات.
+      تساعد المستخدمين في إنشاء أسئلة لاستبياناتهم.
+      رد بطريقة ودية ومهنية باللغة العربية.
+      قدم اقتراحات ذات صلة بناءً على رسالة المستخدم.
+      إذا طلب المستخدم إنشاء سؤال، قم بذلك فورًا.`,
+      
+      tn: `You are an expert survey creation assistant speaking Tunisian dialect.
+      Help users generate survey questions.
+      Respond in Tunisian dialect in a friendly and professional manner.`
+    };
+    
+    try {
+      const completion = await this.groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt[detectedLang] || systemPrompt['fr']
+          },
+          {
+            role: 'user',
+            content: message
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      });
+
+      const response = completion.choices[0]?.message?.content || 
+        this.getDefaultChatResponse(detectedLang);
+
+      return {
+        response: response,
+        emotion: emotionAnalysis.emotion,
+        confidence: emotionAnalysis.confidence
+      };
+      
+    } catch (error) {
+      this.logger.error(`Chat error: ${error.message}`);
+      return {
+        response: this.getDefaultChatResponse(detectedLang),
+        emotion: emotionAnalysis.emotion,
+        confidence: emotionAnalysis.confidence
+      };
+    }
+  }
+
+  private getDefaultChatResponse(language: string): string {
+    const responses = {
+      fr: "Je suis là pour vous aider à créer des questions de sondage. Quel sujet souhaitez-vous explorer ?",
+      en: "I'm here to help you create survey questions. What topic would you like to explore?",
+      ar: "أنا هنا لمساعدتك في إنشاء أسئلة الاستبيان. ما الموضوع الذي تريد استكشافه؟",
+      tn: "Je suis là pour t'aider à créer des questions de sondage. Quel sujet tu veux explorer ?"
+    };
+    return responses[language] || responses['fr'];
+  }
+
+  // ✅ GÉNÉRATION ADAPTATIVE
   async generateAdaptiveQuestion(
     theme: string,
     history: string,
@@ -307,18 +272,10 @@ Génère MAINTENANT la question adaptée (JSON uniquement):
     const emotionAnalysis = this.analyzeEmotion(lastAnswer);
 
     this.logger.log(`🎯 Génération adaptative - Thème: ${theme}`);
-    this.logger.log(
-      `📊 Émotion détectée: ${emotionAnalysis.emotion} (confiance: ${emotionAnalysis.confidence})`,
-    );
-    this.logger.log(`🌐 Langue: ${detectedLang}`);
+    this.logger.log(`📊 Émotion: ${emotionAnalysis.emotion} (${(emotionAnalysis.confidence * 100).toFixed(0)}%)`);
 
     const prompt = this.buildDynamicAdaptivePrompt(
-      theme,
-      history,
-      lastAnswer,
-      emotionAnalysis,
-      detectedLang,
-      previousQuestions,
+      theme, history, lastAnswer, emotionAnalysis, detectedLang, previousQuestions
     );
 
     try {
@@ -327,68 +284,153 @@ Génère MAINTENANT la question adaptée (JSON uniquement):
         messages: [
           {
             role: 'system',
-            content:
-              "Tu es un moteur d'IA pour sondages adaptatifs. Retourne UNIQUEMENT du JSON valide. Pas de markdown, pas d'explications.",
+            content: "Tu es un moteur d'IA pour sondages adaptatifs. Retourne UNIQUEMENT du JSON valide."
           },
-          {
-            role: 'user',
-            content: prompt,
-          },
+          { role: 'user', content: prompt }
         ],
         temperature: 0.4,
         response_format: { type: 'json_object' },
       });
 
       let content = response.choices?.[0]?.message?.content ?? '';
-      content = content
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
-
+      content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) content = jsonMatch[0];
 
       const parsed = JSON.parse(content);
 
-      // Validation et enrichissement
-      const result: AdaptiveQuestionResponse = {
-        question:
-          parsed.question ||
-          this.getFallbackQuestion(emotionAnalysis.emotion, theme),
-        emotion: (parsed.emotion as any) || emotionAnalysis.emotion,
-        intent:
-          (parsed.intent as any) ||
-          this.mapEmotionToIntent(emotionAnalysis.emotion),
+      return {
+        question: parsed.question || this.getFallbackQuestion(emotionAnalysis.emotion, theme),
+        emotion: parsed.emotion || emotionAnalysis.emotion,
+        intent: parsed.intent || this.mapEmotionToIntent(emotionAnalysis.emotion),
         confidence: parsed.confidence || emotionAnalysis.confidence,
-        suggestedQuestionType:
-          parsed.suggestedQuestionType ||
-          this.suggestQuestionType(emotionAnalysis.emotion),
+        suggestedQuestionType: parsed.suggestedQuestionType || this.suggestQuestionType(emotionAnalysis.emotion),
       };
-
-      this.logger.log(`✅ Question générée: ${result.question}`);
-      this.logger.log(
-        `🎯 Intent: ${result.intent}, Type suggéré: ${result.suggestedQuestionType}`,
-      );
-
-      return result;
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error(`❌ Erreur génération: ${error.message}`);
-
       return {
         question: this.getFallbackQuestion(emotionAnalysis.emotion, theme),
         emotion: emotionAnalysis.emotion as any,
         intent: this.mapEmotionToIntent(emotionAnalysis.emotion),
         confidence: emotionAnalysis.confidence,
-        suggestedQuestionType: this.suggestQuestionType(
-          emotionAnalysis.emotion,
-        ),
+        suggestedQuestionType: this.suggestQuestionType(emotionAnalysis.emotion),
       };
     }
   }
 
-  private mapEmotionToIntent(
-    emotion: string,
-  ): 'satisfaction' | 'problem' | 'clarification' | 'explore' {
+  // ✅ GÉNÉRATION DE QUESTION SIMPLE (legacy)
+  async generateQuestion(
+    prompt: string,
+    id?: string,
+    questionType?: QuestionType,
+    lang?: string,
+  ): Promise<any[]> {
+    const question = await this.generateTextQuestion(prompt, lang);
+    return [{
+      id: Date.now().toString(),
+      type: questionType || 'text',
+      title: question,
+      required: true,
+      options: [],
+    }];
+  }
+
+  // ✅ GÉNÉRATION DE QUESTION DE SONDAGE
+  async generateSurveyQuestion(
+    topic: string,
+    questionType: string = 'open',
+    language: string = 'fr'
+  ): Promise<string> {
+    return this.generateTextQuestion(`${topic} - type: ${questionType}`, language);
+  }
+
+  // ✅ ANALYSE DE RÉPONSE
+  async analyzeUserResponse(
+    question: string,
+    answer: string,
+    language: string = 'fr'
+  ): Promise<{
+    sentiment: string;
+    followUpQuestion: string;
+    keywords: string[];
+  }> {
+    const emotionAnalysis = this.analyzeEmotion(answer);
+    const followUp = await this.generateTextQuestion(
+      `Question de suivi basée sur: ${answer}`,
+      language
+    );
+    
+    return {
+      sentiment: emotionAnalysis.emotion,
+      followUpQuestion: followUp,
+      keywords: emotionAnalysis.keywords
+    };
+  }
+
+  // ✅ TRADUCTION
+  async translateQuestion(question: string, targetLanguage: string): Promise<string> {
+    return this.generateTextQuestion(`Traduis cette question en ${targetLanguage}: ${question}`, targetLanguage);
+  }
+
+  // ✅ CONSTRUCTION DU PROMPT DYNAMIQUE
+  private buildDynamicAdaptivePrompt(
+    theme: string,
+    history: string,
+    lastAnswer: string,
+    emotionAnalysis: any,
+    userLanguage: string,
+    previousQuestions: string[] = [],
+  ): string {
+    const languageInstruction = this.getLanguageInstruction(userLanguage);
+    const formattedHistory = history || 'Aucune réponse précédente';
+    
+    let emotionGuidance = '';
+    switch (emotionAnalysis.emotion) {
+      case 'positive':
+        emotionGuidance = `L'utilisateur est SATISFAIT. Génère une question sur ce qu'il/elle a le plus aimé.`;
+        break;
+      case 'negative':
+        emotionGuidance = `L'utilisateur est MÉCONTENT. Génère une question sur les problèmes rencontrés.`;
+        break;
+      case 'confused':
+        emotionGuidance = `L'utilisateur est PERDU. Génère une question pour clarifier.`;
+        break;
+      default:
+        emotionGuidance = `L'utilisateur est NEUTRE. Génère une question pour explorer ses besoins.`;
+    }
+
+    const avoidQuestions = previousQuestions.length > 0 
+      ? `Évite: ${previousQuestions.map(q => `"${q}"`).join(', ')}`
+      : '';
+
+    return `${languageInstruction}
+
+Thème: "${theme}"
+Historique: ${formattedHistory}
+Dernière réponse: "${lastAnswer}"
+${emotionGuidance}
+${avoidQuestions}
+
+Génère UNE question courte en JSON:
+{
+  "question": "...",
+  "emotion": "${emotionAnalysis.emotion}",
+  "intent": "satisfaction|problem|clarification|explore",
+  "suggestedQuestionType": "text|single_choice|rating|scale"
+}`;
+  }
+
+  private getLanguageInstruction(lang: string): string {
+    const instructions = {
+      tn: `تحكي بالدارجة التونسية. أسئلتك تكون واضحة وقصيرة.`,
+      ar: `أجب باللغة العربية الفصحى. أسئلتك واضحة ومباشرة.`,
+      fr: `Réponds en français. Tes questions sont courtes et claires.`,
+      en: `Respond in English. Your questions are short and clear.`,
+    };
+    return instructions[lang as keyof typeof instructions] || instructions['en'];
+  }
+
+  private mapEmotionToIntent(emotion: string): 'satisfaction' | 'problem' | 'clarification' | 'explore' {
     const mapping: Record<string, any> = {
       positive: 'satisfaction',
       negative: 'problem',
@@ -400,14 +442,10 @@ Génère MAINTENANT la question adaptée (JSON uniquement):
 
   private suggestQuestionType(emotion: string): QuestionType {
     switch (emotion) {
-      case 'positive':
-        return 'text';
-      case 'negative':
-        return 'text';
-      case 'confused':
-        return 'single_choice';
-      default:
-        return 'text';
+      case 'positive': return 'text';
+      case 'negative': return 'text';
+      case 'confused': return 'single_choice';
+      default: return 'text';
     }
   }
 
@@ -419,33 +457,6 @@ Génère MAINTENANT la question adaptée (JSON uniquement):
       neutral: `Que pensez-vous de cette expérience sur "${theme}" ?`,
     };
     return fallbacks[emotion] || fallbacks['neutral'];
-  }
-
-  // Méthodes legacy (gardées pour compatibilité)
-  async generateQuestion(
-    prompt: string,
-    id?: string,
-    questionType?: QuestionType,
-    lang?: string,
-  ): Promise<any[]> {
-    // ... garder l'implémentation existante
-    const generationId = id || this.generateId();
-    const detectedLanguage = lang || this.detectLanguage(prompt);
-
-    // Simuler une réponse pour l'exemple
-    return [
-      {
-        id: Date.now().toString(),
-        type: questionType || 'text',
-        title: prompt,
-        required: true,
-        options: [],
-      },
-    ];
-  }
-
-  async generateTextQuestion(prompt: string, lang?: string): Promise<string> {
-    return prompt;
   }
 
   getAllGenerations(): QuestionGenerationEvent[] {

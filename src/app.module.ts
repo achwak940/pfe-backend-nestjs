@@ -18,6 +18,10 @@ import { YoloModule } from './yolo/yolo.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { Feedback } from './feedback/entities/feedback.entity';
 import { AiQuestionsModule } from './GenerationQuestions/ai-questions/ai-questions.module';
+import { ReclamationModule } from './reclamation/reclamation.module';
+import { Reclamation } from './reclamation/entities/reclamation.entity';
+import { Message } from './message/entities/message.entity';
+import { MessageModule } from './message/message.module';
 
 @Module({
   imports: [  
@@ -32,7 +36,7 @@ import { AiQuestionsModule } from './GenerationQuestions/ai-questions/ai-questio
         username:ConfigService.get("DB_USERNAME"),
         password:ConfigService.get("DB_PASSWORD"),
         database:ConfigService.get("DB_NAME"),
-        entities:[Utilisateur,Enquete,Question,Option,Reponse,Feedback],
+        entities:[Utilisateur,Enquete,Question,Option,Reponse,Feedback,Reclamation,Message],
         synchronize:true,//creation auto de table si n'existe pas 
       })
     }),
@@ -44,7 +48,9 @@ import { AiQuestionsModule } from './GenerationQuestions/ai-questions/ai-questio
     ReponseModule,
     YoloModule,
     FeedbackModule,
-    AiQuestionsModule
+    AiQuestionsModule,
+    ReclamationModule,
+    MessageModule
   ],
   controllers: [AppController],
   providers: [AppService],

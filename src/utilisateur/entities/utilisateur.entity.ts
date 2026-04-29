@@ -3,6 +3,7 @@ import { Role } from "../role.enum";
 import { Status } from "../status.enum";
 import { Enquete } from "src/enquete/entities/enquete.entity";
 import { Feedback } from "src/feedback/entities/feedback.entity";
+import { Reclamation } from "src/reclamation/entities/reclamation.entity";
 @Entity()
 export class Utilisateur {
     @PrimaryGeneratedColumn()
@@ -50,4 +51,6 @@ statut: Status;
     enquetes: Enquete[];
      @OneToMany(() => Feedback, feedback => feedback.utilisateur)
   feedbacks: Feedback[];
+  @OneToMany(() => Reclamation, (rec) => rec.user)
+reclamations: Reclamation[];
 }

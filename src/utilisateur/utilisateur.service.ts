@@ -30,7 +30,7 @@ async create(
   createUtilisateurDto: CreateUtilisateurDto,
   file?: Express.Multer.File,
 ) {
-  const { prenom, nom, email, mot_de_passe } = createUtilisateurDto;
+  const { prenom, nom, email, mot_de_passe ,telephone} = createUtilisateurDto;
 
   // ================= VALIDATION =================
   if (!prenom?.trim()) return { erreur: 'Le prenom est obligatoire' };
@@ -92,6 +92,9 @@ async create(
     token_expiration,
     statut: Status.INACTIF,
     photo_profil,
+    telephone
+
+    
   });
 
   await this.utilisateurRepository.save(utilisateur);
@@ -190,12 +193,79 @@ async create(
     }
     return qb.getMany();
   }
-  update(id: number, updateUtilisateurDto: UpdateUtilisateurDto) {
-    return `This action updates a #${id} utilisateur`;
+ // utilisateur.service.ts
+async update(id: number, updateUtilisateurDto: UpdateUtilisateurDto) {
+  // Vérifier si l'utilisateur existe
+  const utilisateur = await this.utilisateurRepository.findOne({ 
+    where: { id } 
+  });
+  
+  if (!utilisateur) {
+    return {
+      success: false,
+      message: `Utilisateur avec l'ID ${id} non trouvé`
+    };
   }
-  remove(id: number) {
-    return `This action removes a #${id} utilisateur`;
+
+  // Mettre à jour les champs
+  if (updateUtilisateurDto.prenom) utilisateur.prenom = updateUtilisateurDto.prenom;
+  if (updateUtilisateurDto.nom) utilisateur.nom = updateUtilisateurDto.nom;
+  if (updateUtilisateurDto.email) utilisateur.email = updateUtilisateurDto.email;
+  if (updateUtilisateurDto.telephone) utilisateur.telephone = updateUtilisateurDto.telephone;
+  if (updateUtilisateurDto.photo_profil) utilisateur.photo_profil = updateUtilisateurDto.photo_profil;
+  
+  // Si mot de passe fourni, le hacher
+  if (updateUtilisateurDto.mot_de_passe) {
+    const bcrypt = require('bcrypt');
+    utilisateur.mot_de_passe = await bcrypt.hash(updateUtilisateurDto.mot_de_passe, 10);
   }
+  
+  utilisateur.date_modification = new Date();
+
+  // Sauvegarder
+  await this.utilisateurRepository.save(utilisateur);
+
+  // Retourner une réponse JSON
+  return {
+    success: true,
+    message: `Utilisateur ${utilisateur.prenom} ${utilisateur.nom} modifié avec succès`,
+    utilisateur: {
+      id: utilisateur.id,
+      prenom: utilisateur.prenom,
+      nom: utilisateur.nom,
+      email: utilisateur.email,
+      role: utilisateur.role,
+      statut: utilisateur.statut
+    }
+  };
+}
+// utilisateur.service.ts
+async remove(id: number) {
+  // Vérifier si l'utilisateur existe
+  const utilisateur = await this.utilisateurRepository.findOne({ 
+    where: { id } 
+  });
+  
+  if (!utilisateur) {
+    return {
+      success: false,
+      message: `Utilisateur avec l'ID ${id} non trouvé`
+    };
+  }
+
+  // Sauvegarder les infos pour le message
+  const nomUtilisateur = `${utilisateur.prenom} ${utilisateur.nom}`;
+  
+  // Supprimer l'utilisateur
+  await this.utilisateurRepository.remove(utilisateur);
+
+  // Retourner une réponse JSON
+  return {
+    success: true,
+    message: `Utilisateur "${nomUtilisateur}" supprimé avec succès`,
+    userId: id
+  };
+}
   async findEnquetesByUser(userId: number) {
     return this.enqueteRepo.find({
       where: { user: { id: userId } },

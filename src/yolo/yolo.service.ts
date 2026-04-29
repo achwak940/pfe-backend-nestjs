@@ -5,44 +5,68 @@ import * as fs from 'fs';
 
 @Injectable()
 export class YoloService {
-  async predict(filePath: string, originalName: string) {
+
+  private fastApiUrl = 'http://localhost:8000';
+
+  // =====================================================
+  // 📸 1. YOLO ONLY (détection + boxes + severity)
+  // =====================================================
+  async yoloPredict(filePath: string, originalName: string) {
     try {
-      // Crée le FormData pour envoyer à FastAPI
       const formData = new FormData();
       formData.append('file', fs.createReadStream(filePath), originalName);
 
-      // Appel du serveur FastAPI
-      const response = await axios.post('http://localhost:8000/predict', formData, {
-        headers: formData.getHeaders(),
-      });
+      const response = await axios.post(
+        `${this.fastApiUrl}/predict`,
+        formData,
+        { headers: formData.getHeaders() }
+      );
 
-      // Supprime le fichier temporaire si il existe
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      this.safeDelete(filePath);
 
       return response.data;
+
     } catch (error: any) {
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      return { error: 'Erreur lors de l’appel au serveur YOLO', details: error.message };
+      this.safeDelete(filePath);
+
+      return {
+        error: 'YOLO prediction failed',
+        details: error.message,
+      };
     }
   }
 
-  create(createYoloDto: any) {
-    return 'This action adds a new yolo';
+  // =====================================================
+  // 💰 2. PRICE + DURATION ONLY (ML model)
+  // =====================================================
+  async predictPriceDuration(data: {
+    total_damage: number,
+    device_enc: number,
+    damage_enc: number
+  }) {
+
+    try {
+      const response = await axios.post(
+        `${this.fastApiUrl}/predictPrixDuration`,
+        data
+      );
+
+      return response.data;
+
+    } catch (error: any) {
+      return {
+        error: 'Price/Duration prediction failed',
+        details: error.message,
+      };
+    }
   }
 
-  findAll() {
-    return 'This action returns all yolo';
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} yolo`;
-  }
-
-  update(id: number, updateYoloDto: any) {
-    return `This action updates a #${id} yolo`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} yolo`;
+  // =====================================================
+  // 🧹 helper
+  // =====================================================
+  private safeDelete(filePath: string) {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
   }
 }

@@ -4,10 +4,11 @@ import { EnqueteController } from './enquete.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Enquete } from './entities/enquete.entity';
 import { Question } from 'src/question/entities/question.entity';
+import { Reponse } from 'src/reponse/entities/reponse.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Enquete, Question])
+    TypeOrmModule.forFeature([Enquete, Question,Reponse])
   ],
   controllers: [EnqueteController],
   providers: [EnqueteService],
