@@ -1,45 +1,80 @@
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import * as fs from 'fs';
-import * as express from 'express';
+import { Logger } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+  
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
   // Configuration CORS
   app.enableCors({
-    origin: true, 
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    origin: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'X-Requested-With', 'Origin'],
+    exposedHeaders: ['Content-Disposition'],
   });
   
-  // Création du dossier profiles s'il n'existe pas
-  const profilesPath = join(__dirname, '..', 'uploads', 'profiles');
-  if (!fs.existsSync(profilesPath)) {
-    fs.mkdirSync(profilesPath, { recursive: true });
+  // Création des dossiers nécessaires
+  const uploadsDir = join(process.cwd(), 'uploads');
+  const reclamationsPath = join(uploadsDir, 'reclamations');
+  const profilesPath = join(uploadsDir, 'profiles');  // 👈 AJOUTER CETTE LIGNE
+  
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    logger.log(`✅ Dossier créé: ${uploadsDir}`);
   }
   
-  // Création du dossier reclamations s'il n'existe pas
-  const reclamationsPath = join(__dirname, '..', 'uploads', 'reclamations');
   if (!fs.existsSync(reclamationsPath)) {
     fs.mkdirSync(reclamationsPath, { recursive: true });
+    logger.log(`✅ Dossier créé: ${reclamationsPath}`);
   }
   
-  // Servir les fichiers statiques du dossier uploads
-  app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
+  // 👈 AJOUTER CETTE SECTION POUR LES PHOTOS DE PROFIL
+  if (!fs.existsSync(profilesPath)) {
+    fs.mkdirSync(profilesPath, { recursive: true });
+    logger.log(`✅ Dossier créé: ${profilesPath}`);
+  }
   
-  // Servir spécifiquement le dossier reclamations
-  app.use('/uploads/reclamations', express.static(join(__dirname, '..', 'uploads', 'reclamations')));
+  // Servir les fichiers statiques des réclamations
+  app.useStaticAssets(reclamationsPath, {
+    prefix: '/uploads/reclamations/',
+  });
   
-  // Démarrer le serveur sur toutes les interfaces (0.0.0.0) pour l'accès réseau
-  await app.listen(3000, '0.0.0.0');
+  // 👈 AJOUTER CETTE LIGNE POUR SERVIR LES PHOTOS DE PROFIL
+  app.useStaticAssets(profilesPath, {
+    prefix: '/uploads/profiles/',
+  });
   
-  console.log('🚀 Serveur démarré avec succès!');
-  console.log('   ➜ Local: http://localhost:3000');
-  console.log('   ➜ Réseau: http://10.31.77.179:3000');
-  console.log('   ➜ Uploads disponibles sur: http://localhost:3000/uploads/');
-  console.log('   ➜ Images des réclamations: http://localhost:3000/uploads/reclamations/');
+  // Démarrer le serveur
+  const port = 3000;
+  await app.listen(port, '0.0.0.0');
+  
+  logger.log(`🚀 Serveur démarré sur http://localhost:${port}`);
+  logger.log(`📁 Réclamations disponibles sur http://localhost:${port}/uploads/reclamations/`);
+  logger.log(`👤 Profils disponibles sur http://localhost:${port}/uploads/profiles/`); // 👈 AJOUTER
+  
+  // Afficher les fichiers existants
+  if (fs.existsSync(reclamationsPath)) {
+    const files = fs.readdirSync(reclamationsPath);
+    logger.log(`📸 ${files.length} réclamation(s) trouvée(s)`);
+  }
+  
+  // 👈 AJOUTER CETTE SECTION POUR AFFICHER LES PHOTOS DE PROFIL
+  if (fs.existsSync(profilesPath)) {
+    const files = fs.readdirSync(profilesPath);
+    logger.log(`👤 ${files.length} photo(s) de profil trouvée(s)`);
+    if (files.length > 0) {
+      files.forEach(file => {
+        logger.log(`   📷 http://localhost:${port}/uploads/profiles/${file}`);
+      });
+    }
+  }
 }
 
 bootstrap();

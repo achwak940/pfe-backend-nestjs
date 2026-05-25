@@ -8,37 +8,42 @@ import { UpdateMessageDto } from './dto/update-message.dto';
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
-  // Envoyer un message
+  // ==================== ENVOI DE MESSAGES ====================
+  
   @Post('send')
   create(@Body() createMessageDto: CreateMessageDto) {
     return this.messageService.create(createMessageDto);
   }
 
-  // Récupérer tous les messages d'un utilisateur
+  // ==================== RÉCUPÉRATION DE MESSAGES ====================
+  
   @Get('user/:userId')
   findAllByUser(@Param('userId') userId: string) {
     return this.messageService.findAllByUser(+userId);
   }
 
-  // Récupérer les messages reçus
   @Get('received/:userId')
   getReceivedMessages(@Param('userId') userId: string) {
     return this.messageService.getReceivedMessages(+userId);
   }
 
-  // Récupérer les messages envoyés
   @Get('sent/:userId')
   getSentMessages(@Param('userId') userId: string) {
     return this.messageService.getSentMessages(+userId);
   }
 
-  // Récupérer les conversations d'un utilisateur
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.messageService.findOne(+id);
+  }
+
+  // ==================== CONVERSATIONS ====================
+  
   @Get('conversations/:userId')
   getConversations(@Param('userId') userId: string) {
     return this.messageService.getConversations(+userId);
   }
 
-  // Récupérer une conversation entre deux utilisateurs
   @Get('conversation/:userId1/:userId2')
   getConversation(
     @Param('userId1') userId1: string,
@@ -47,33 +52,45 @@ export class MessageController {
     return this.messageService.getConversation(+userId1, +userId2);
   }
 
-  // Récupérer le nombre de messages non lus
-  @Get('unread/:userId')
-  getUnreadCount(@Param('userId') userId: string) {
-    return this.messageService.getUnreadCount(+userId);
-  }
-
-  // Marquer un message comme lu
+  // ==================== MARQUAGE / LECTURE ====================
+  
   @Patch('read/:id')
   markAsRead(@Param('id') id: string) {
     return this.messageService.markAsRead(+id);
   }
 
-  // Récupérer un message spécifique
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.messageService.findOne(+id);
+  @Patch('conversation/read/:userId/:interlocuteurId')
+  markConversationAsRead(
+    @Param('userId') userId: string,
+    @Param('interlocuteurId') interlocuteurId: string,
+  ) {
+    return this.messageService.markConversationAsRead(+userId, +interlocuteurId);
   }
 
-  // Mettre à jour un message (général)
+  @Get('unread/:userId')
+  getUnreadCount(@Param('userId') userId: string) {
+    return this.messageService.getUnreadCount(+userId);
+  }
+
+  // ==================== MISES À JOUR ====================
+  
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateMessageDto: UpdateMessageDto) {
     return this.messageService.update(+id, updateMessageDto);
   }
 
-  // Supprimer un message
+  // ==================== SUPPRESSION ====================
+  
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.messageService.remove(+id);
+  }
+
+  @Delete('conversation/:userId/:interlocuteurId')
+  deleteConversation(
+    @Param('userId') userId: string,
+    @Param('interlocuteurId') interlocuteurId: string,
+  ) {
+    return this.messageService.deleteConversation(+userId, +interlocuteurId);
   }
 }

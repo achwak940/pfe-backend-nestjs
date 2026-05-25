@@ -1,7 +1,7 @@
 // src/message/message.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, Not, IsNull } from 'typeorm';
 import { Message } from './entities/message.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -16,10 +16,8 @@ export class MessageService {
     private utilisateurRepository: Repository<Utilisateur>,
   ) {}
 
-  // Envoyer un message
   async create(createMessageDto: CreateMessageDto) {
     try {
-      // Vérifier si l'expéditeur existe
       const expediteur = await this.utilisateurRepository.findOne({
         where: { id: createMessageDto.expediteurId }
       });
@@ -27,7 +25,6 @@ export class MessageService {
         return { success: false, message: 'Expéditeur non trouvé' };
       }
 
-      // Vérifier si le destinataire existe
       const destinataire = await this.utilisateurRepository.findOne({
         where: { id: createMessageDto.destinataireId }
       });
@@ -35,7 +32,6 @@ export class MessageService {
         return { success: false, message: 'Destinataire non trouvé' };
       }
 
-      // Créer le message
       const message = this.messageRepository.create({
         expediteurId: createMessageDto.expediteurId,
         destinataireId: createMessageDto.destinataireId,
@@ -53,7 +49,9 @@ export class MessageService {
           id: message.id,
           sujet: message.sujet,
           contenu: message.contenu,
-          dateEnvoi: message.dateEnvoi
+          dateEnvoi: message.dateEnvoi,
+          expediteurId: message.expediteurId,
+          destinataireId: message.destinataireId
         }
       };
     } catch (error) {
@@ -62,7 +60,6 @@ export class MessageService {
     }
   }
 
-  // Récupérer tous les messages d'un utilisateur
   async findAllByUser(userId: number) {
     try {
       const messages = await this.messageRepository.find({
@@ -72,7 +69,7 @@ export class MessageService {
         ],
         relations: ['expediteur', 'destinataire'],
         order: { dateEnvoi: 'DESC' }
-    });
+      });
 
       const formattedMessages = messages.map(msg => ({
         id: msg.id,
@@ -101,47 +98,42 @@ export class MessageService {
       return { success: false, message: 'Erreur lors de la récupération des messages' };
     }
   }
-  // src/message/message.service.ts
-// Ajoutez cette méthode après la méthode markAsRead (ou n'importe où dans la classe)
 
-// Mettre à jour un message
-async update(id: number, updateMessageDto: UpdateMessageDto) {
-  try {
-    const message = await this.messageRepository.findOne({ where: { id } });
-    if (!message) {
-      return { success: false, message: 'Message non trouvé' };
-    }
-
-    // Mettre à jour les champs
-    if (updateMessageDto.sujet) message.sujet = updateMessageDto.sujet;
-    if (updateMessageDto.contenu) message.contenu = updateMessageDto.contenu;
-    if (updateMessageDto.lu !== undefined) {
-      message.lu = updateMessageDto.lu;
-      if (updateMessageDto.lu === true) {
-        message.dateLecture = new Date();
+  async update(id: number, updateMessageDto: UpdateMessageDto) {
+    try {
+      const message = await this.messageRepository.findOne({ where: { id } });
+      if (!message) {
+        return { success: false, message: 'Message non trouvé' };
       }
-    }
 
-    await this.messageRepository.save(message);
-
-    return {
-      success: true,
-      message: 'Message mis à jour avec succès',
-      data: {
-        id: message.id,
-        sujet: message.sujet,
-        contenu: message.contenu,
-        lu: message.lu,
-        dateEnvoi: message.dateEnvoi
+      if (updateMessageDto.sujet) message.sujet = updateMessageDto.sujet;
+      if (updateMessageDto.contenu) message.contenu = updateMessageDto.contenu;
+      if (updateMessageDto.lu !== undefined) {
+        message.lu = updateMessageDto.lu;
+        if (updateMessageDto.lu === true) {
+          message.dateLecture = new Date();
+        }
       }
-    };
-  } catch (error) {
-    console.error('Erreur mise à jour message:', error);
-    return { success: false, message: 'Erreur lors de la mise à jour du message' };
+
+      await this.messageRepository.save(message);
+
+      return {
+        success: true,
+        message: 'Message mis à jour avec succès',
+        data: {
+          id: message.id,
+          sujet: message.sujet,
+          contenu: message.contenu,
+          lu: message.lu,
+          dateEnvoi: message.dateEnvoi
+        }
+      };
+    } catch (error) {
+      console.error('Erreur mise à jour message:', error);
+      return { success: false, message: 'Erreur lors de la mise à jour du message' };
+    }
   }
-}
 
-  // Récupérer les messages reçus
   async getReceivedMessages(userId: number) {
     try {
       const messages = await this.messageRepository.find({
@@ -171,7 +163,6 @@ async update(id: number, updateMessageDto: UpdateMessageDto) {
     }
   }
 
-  // Récupérer les messages envoyés
   async getSentMessages(userId: number) {
     try {
       const messages = await this.messageRepository.find({
@@ -201,52 +192,52 @@ async update(id: number, updateMessageDto: UpdateMessageDto) {
     }
   }
 
-  // src/message/message.service.ts - Méthode getConversation
-async getConversation(userId1: number, userId2: number) {
-  try {
-    console.log(`Recherche conversation entre ${userId1} et ${userId2}`);
-    
-    // Vérifier si les utilisateurs existent
-    const user1 = await this.utilisateurRepository.findOne({ where: { id: userId1 } });
-    const user2 = await this.utilisateurRepository.findOne({ where: { id: userId2 } });
-    
-    if (!user1 || !user2) {
-      return { 
-        success: false, 
-        message: 'Un ou plusieurs utilisateurs n\'existent pas',
-        data: [] 
-      };
+  async getConversation(userId1: number, userId2: number) {
+    try {
+      console.log(`Recherche conversation entre ${userId1} et ${userId2}`);
+      
+      const user1 = await this.utilisateurRepository.findOne({ where: { id: userId1 } });
+      const user2 = await this.utilisateurRepository.findOne({ where: { id: userId2 } });
+      
+      if (!user1 || !user2) {
+        return { 
+          success: false, 
+          message: 'Un ou plusieurs utilisateurs n\'existent pas',
+          data: [] 
+        };
+      }
+      
+      const messages = await this.messageRepository.find({
+        where: [
+          { expediteurId: userId1, destinataireId: userId2 },
+          { expediteurId: userId2, destinataireId: userId1 }
+        ],
+        relations: ['expediteur', 'destinataire'],
+        order: { dateEnvoi: 'ASC' }
+      });
+
+      console.log(`Messages trouvés: ${messages.length}`);
+
+      const formattedMessages = messages.map(msg => ({
+        id: msg.id,
+        sujet: msg.sujet,
+        contenu: msg.contenu,
+        lu: msg.lu,
+        dateEnvoi: msg.dateEnvoi,
+        expediteurId: msg.expediteurId,
+        destinataireId: msg.destinataireId,
+        estMoi: msg.expediteurId === userId1,
+        expediteurNom: msg.expediteur.prenom + ' ' + msg.expediteur.nom,
+        destinataireNom: msg.destinataire.prenom + ' ' + msg.destinataire.nom
+      }));
+
+      return { success: true, data: formattedMessages };
+    } catch (error) {
+      console.error('Erreur getConversation:', error);
+      return { success: false, message: 'Erreur lors de la récupération de la conversation', data: [] };
     }
-    
-    const messages = await this.messageRepository.find({
-      where: [
-        { expediteurId: userId1, destinataireId: userId2 },
-        { expediteurId: userId2, destinataireId: userId1 }
-      ],
-      relations: ['expediteur', 'destinataire'],
-      order: { dateEnvoi: 'ASC' }
-    });
-
-    console.log(`Messages trouvés: ${messages.length}`);
-
-    const formattedMessages = messages.map(msg => ({
-      id: msg.id,
-      sujet: msg.sujet,
-      contenu: msg.contenu,
-      lu: msg.lu,
-      dateEnvoi: msg.dateEnvoi,
-      expediteurId: msg.expediteurId,
-      destinataireId: msg.destinataireId,
-      estMoi: msg.expediteurId === userId1
-    }));
-
-    return { success: true, data: formattedMessages };
-  } catch (error) {
-    console.error('Erreur getConversation:', error);
-    return { success: false, message: 'Erreur lors de la récupération de la conversation', data: [] };
   }
-}
-  // Marquer un message comme lu
+
   async markAsRead(id: number) {
     try {
       const message = await this.messageRepository.findOne({ where: { id } });
@@ -264,7 +255,6 @@ async getConversation(userId1: number, userId2: number) {
     }
   }
 
-  // Récupérer le nombre de messages non lus
   async getUnreadCount(userId: number) {
     try {
       const count = await this.messageRepository.count({
@@ -276,7 +266,6 @@ async getConversation(userId1: number, userId2: number) {
     }
   }
 
-  // Récupérer un message par ID
   async findOne(id: number) {
     try {
       const message = await this.messageRepository.findOne({
@@ -313,7 +302,6 @@ async getConversation(userId1: number, userId2: number) {
     }
   }
 
-  // Supprimer un message (soft delete)
   async remove(id: number) {
     try {
       const message = await this.messageRepository.findOne({ where: { id } });
@@ -328,41 +316,83 @@ async getConversation(userId1: number, userId2: number) {
     }
   }
 
-  // Récupérer les conversations (dernier message avec chaque interlocuteur)
   async getConversations(userId: number) {
     try {
-      const messages = await this.messageRepository.find({
-        where: [
-          { expediteurId: userId },
-          { destinataireId: userId }
-        ],
-        relations: ['expediteur', 'destinataire'],
+      // Récupérer tous les utilisateurs qui ont eu une conversation avec l'utilisateur
+      const expediteurs = await this.messageRepository.find({
+        where: { destinataireId: userId },
+        relations: ['expediteur'],
+        order: { dateEnvoi: 'DESC' }
+      });
+
+      const destinataires = await this.messageRepository.find({
+        where: { expediteurId: userId },
+        relations: ['destinataire'],
         order: { dateEnvoi: 'DESC' }
       });
 
       const conversationsMap = new Map();
 
-      messages.forEach(msg => {
-        const interlocuteur = msg.expediteurId === userId ? msg.destinataire : msg.expediteur;
-        const key = interlocuteur.id;
+      // Ajouter les conversations de l'expéditeur
+      expediteurs.forEach(msg => {
+        const user = msg.expediteur;
+        const key = user.id;
+        const isUnread = !msg.lu;
 
         if (!conversationsMap.has(key)) {
           conversationsMap.set(key, {
             user: {
-              id: interlocuteur.id,
-              prenom: interlocuteur.prenom,
-              nom: interlocuteur.nom,
-              email: interlocuteur.email,
-              photo_profil: interlocuteur.photo_profil
+              id: user.id,
+              prenom: user.prenom,
+              nom: user.nom,
+              email: user.email,
+              photo_profil: user.photo_profil,
+              online: user.statut === 'ACTIF'
             },
             dernierMessage: msg.contenu,
             dateDernierMessage: msg.dateEnvoi,
-            nonLu: msg.destinataireId === userId && !msg.lu ? 1 : 0
+            nonLu: isUnread ? 1 : 0,
+            derniereActivite: msg.dateEnvoi
           });
-        } else if (msg.destinataireId === userId && !msg.lu) {
+        } else if (isUnread) {
           const conv = conversationsMap.get(key);
           conv.nonLu++;
-          conversationsMap.set(key, conv);
+          if (msg.dateEnvoi > conv.dateDernierMessage) {
+            conv.dernierMessage = msg.contenu;
+            conv.dateDernierMessage = msg.dateEnvoi;
+          }
+        } else if (msg.dateEnvoi > conversationsMap.get(key).dateDernierMessage) {
+          const conv = conversationsMap.get(key);
+          conv.dernierMessage = msg.contenu;
+          conv.dateDernierMessage = msg.dateEnvoi;
+        }
+      });
+
+      // Ajouter les conversations du destinataire
+      destinataires.forEach(msg => {
+        const user = msg.destinataire;
+        const key = user.id;
+
+        if (!conversationsMap.has(key)) {
+          conversationsMap.set(key, {
+            user: {
+              id: user.id,
+              prenom: user.prenom,
+              nom: user.nom,
+              email: user.email,
+              photo_profil: user.photo_profil,
+              online: user.statut === 'ACTIF'
+            },
+            dernierMessage: msg.contenu,
+            dateDernierMessage: msg.dateEnvoi,
+            nonLu: 0,
+            derniereActivite: msg.dateEnvoi
+          });
+        } else if (msg.dateEnvoi > conversationsMap.get(key).dateDernierMessage) {
+          const conv = conversationsMap.get(key);
+          conv.dernierMessage = msg.contenu;
+          conv.dateDernierMessage = msg.dateEnvoi;
+          conv.derniereActivite = msg.dateEnvoi;
         }
       });
 
@@ -371,7 +401,48 @@ async getConversation(userId1: number, userId2: number) {
 
       return { success: true, data: conversations };
     } catch (error) {
-      return { success: false, message: 'Erreur lors de la récupération des conversations' };
+      console.error('Erreur getConversations:', error);
+      return { success: false, message: 'Erreur lors de la récupération des conversations', data: [] };
     }
   }
+
+  // Nouvelle méthode pour marquer tous les messages d'une conversation comme lus
+  async markConversationAsRead(userId: number, interlocuteurId: number) {
+    try {
+      await this.messageRepository.update(
+        {
+          expediteurId: interlocuteurId,
+          destinataireId: userId,
+          lu: false
+        },
+        {
+          lu: true,
+          dateLecture: new Date()
+        }
+      );
+      return { success: true, message: 'Conversation marquée comme lue' };
+    } catch (error) {
+      return { success: false, message: 'Erreur lors du marquage de la conversation' };
+    }
+  }
+  // Ajoutez cette méthode dans message.service.ts
+
+async deleteConversation(userId: number, interlocuteurId: number) {
+  try {
+    await this.messageRepository.delete({
+      expediteurId: userId,
+      destinataireId: interlocuteurId
+    });
+    
+    await this.messageRepository.delete({
+      expediteurId: interlocuteurId,
+      destinataireId: userId
+    });
+    
+    return { success: true, message: 'Conversation supprimée avec succès' };
+  } catch (error) {
+    console.error('Erreur suppression conversation:', error);
+    return { success: false, message: 'Erreur lors de la suppression de la conversation' };
+  }
+}
 }

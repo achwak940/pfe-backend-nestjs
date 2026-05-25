@@ -1,4 +1,3 @@
-// reponse.service.ts - Version corrigée complète
 import { Injectable } from '@nestjs/common';
 import { CreateReponseDto } from './dto/create-reponse.dto';
 import { UpdateReponseDto } from './dto/update-reponse.dto';
@@ -63,15 +62,13 @@ export class ReponseService {
         e.titre,
         e.statut,
         e."dateFin"
-
       FROM "reponse" r
       JOIN "utilisateur" u ON u.id = r.utilisateur_id
       JOIN "enquete" e ON e.id = r."enquete_id"
       WHERE r."reponseTexte" IS NOT NULL
         AND TRIM(r."reponseTexte") <> ''
         AND e."userId" = $1 
-
-      ORDER BY u.id, LENGTH(r."reponseTexte") DESC; 
+      ORDER BY u.id, LENGTH(r."reponseTexte") DESC
       `,
       [userId],
     );
@@ -141,24 +138,12 @@ export class ReponseService {
       return { msg: 'Aucune réponse trouvée', data: [] };
     }
 
-    type UserResponse = {
-      user_id: number;
-      nom: string;
-      prenom: string;
-      email: string;
-      photo_profil: string | null;
-      date_creation: string;
-      titre_enquete: string;
-      statut: string;
-      reponses: { question: string; reponse: string; type: string }[];
-    };
-
-    const mapUser = new Map<number, UserResponse>();
+    const mapUser = new Map();
 
     for (const r of reponses) {
       if (!mapUser.has(r.utilisateur_id)) {
         mapUser.set(r.utilisateur_id, {
-          user_id: r.utilisateur_id,
+          id: r.utilisateur_id,
           nom: r.nom,
           prenom: r.prenom,
           email: r.email,
@@ -170,14 +155,14 @@ export class ReponseService {
         });
       }
 
-      mapUser.get(r.utilisateur_id)?.reponses.push({
+      mapUser.get(r.utilisateur_id).reponses.push({
         question: r.question,
         reponse: r.reponseTexte,
         type: r.type,
       });
     }
 
-    const grouped: UserResponse[] = Array.from(mapUser.values());
+    const grouped = Array.from(mapUser.values());
 
     return {
       msg: 'Voici toutes les réponses par utilisateur avec détails',
@@ -191,21 +176,28 @@ export class ReponseService {
       relations: ['reponses', 'questions'],
     });
 
-    const stats = enquetes.map((enquete) => ({
-      id: enquete.id,
-      titre: enquete.titre,
-      statut: enquete.statut,
-      dateFin: enquete.dateFin,
-      totalReponses: enquete.reponses?.length || 0,
-      totalQuestions: enquete.questions?.length || 0,
-      tauxCompletude:
-        enquete.reponses?.length > 0
-          ? Math.round(
-              (enquete.reponses.length / (enquete.questions?.length || 1)) *
-                100,
-            )
-          : 0,
-    }));
+    const stats = enquetes.map((enquete) => {
+      const totalReponses = enquete.reponses?.length || 0;
+      const totalQuestions = enquete.questions?.length || 0;
+      
+      // CORRECTION : Limiter le taux à 100% maximum
+      let tauxCompletude = 0;
+      if (totalQuestions > 0) {
+        tauxCompletude = Math.min(100, Math.round((totalReponses / totalQuestions) * 100));
+      }
+      
+      return {
+        id: enquete.id,
+        titre: enquete.titre,
+        description: enquete.description,
+        statut: enquete.statut,
+        dateFin: enquete.dateFin,
+        createAt: enquete.createAt,
+        totalReponses: totalReponses,
+        totalQuestions: totalQuestions,
+        tauxCompletude: tauxCompletude,
+      };
+    });
 
     return stats;
   }
@@ -237,14 +229,15 @@ export class ReponseService {
     const result = await this.ReponseRepo.query(
       `
       SELECT 
-        COUNT(DISTINCT r.utilisateur_id) as repondants,
-        COUNT(DISTINCT u.id) as total_utilisateurs
+        COUNT(DISTINCT r.utilisateur_id) AS repondants,
+        COUNT(DISTINCT u.id) AS total_utilisateurs
       FROM "enquete" e
       LEFT JOIN "reponse" r ON e.id = r.enquete_id
       CROSS JOIN (
-        SELECT DISTINCT u.id 
+        SELECT DISTINCT u.id
         FROM "utilisateur" u
-        WHERE u.role IN ('ROLE_USER_CONNECTE', 'ROLE_USER_ANONYME')
+        LEFT JOIN "role" ro ON u.role_id = ro.id
+        WHERE ro.nom IN ('USER_CONNECTE', 'USER_ANONYME') OR u.id IS NOT NULL
       ) u
       WHERE e."userId" = $1
       `,
@@ -253,9 +246,14 @@ export class ReponseService {
 
     const repondants = parseInt(result[0]?.repondants) || 0;
     const total = parseInt(result[0]?.total_utilisateurs) || 1;
-    const taux = Math.round((repondants / total) * 100);
+    // CORRECTION : Limiter le taux à 100% maximum
+    const taux = Math.min(100, Math.round((repondants / total) * 100));
 
-    return { taux, repondants, total };
+    return {
+      taux,
+      repondants,
+      total,
+    };
   }
 
   async getParticipationParPeriode(
@@ -263,20 +261,16 @@ export class ReponseService {
     periode: string = 'semaine',
   ) {
     let groupBy = '';
-    let dateFormat = '';
-
+    
     switch (periode) {
       case 'semaine':
-        groupBy = 'EXTRACT(DOW FROM r."dateReponse")';
-        dateFormat = 'DAY';
+        groupBy = "EXTRACT(DOW FROM r.\"dateReponse\")";
         break;
       case 'mois':
-        groupBy = 'EXTRACT(DAY FROM r."dateReponse")';
-        dateFormat = 'DAY';
+        groupBy = "EXTRACT(DAY FROM r.\"dateReponse\")";
         break;
       default:
-        groupBy = 'EXTRACT(DOW FROM r."dateReponse")';
-        dateFormat = 'DAY';
+        groupBy = "EXTRACT(DOW FROM r.\"dateReponse\")";
     }
 
     const participation = await this.ReponseRepo.query(
@@ -296,12 +290,9 @@ export class ReponseService {
     return participation;
   }
 
-  // Nouvelle méthode pour l'évolution des réponses par période
   async getEvolutionReponses(userId: number, periode: string = 'week') {
     let dateCondition = '';
     let groupBy = '';
-
-    const now = new Date();
 
     switch (periode) {
       case 'today':
@@ -340,7 +331,6 @@ export class ReponseService {
       [userId],
     );
 
-    // Calculer le taux de réponse total
     const tauxResult = await this.getTauxCompletionGlobal(userId);
 
     return {
@@ -353,26 +343,24 @@ export class ReponseService {
     };
   }
 
-  // Nouvelle méthode pour les statistiques des enquêtes par statut
   async getSurveyStatusStats(userId: number) {
     const enquetes = await this.enqueteRepository.find({
       where: { user: { id: userId } },
     });
 
-    const total = enquetes.length;
-    const actives = enquetes.filter((e) => e.statut === StatusEnquete.archive).length;
+    const total = enquetes.length || 1;
+    const publiees = enquetes.filter((e) => e.statut === StatusEnquete.Publiee).length;
     const brouillons = enquetes.filter((e) => e.statut === StatusEnquete.Brouillon).length;
-    const terminees = enquetes.filter((e) => e.statut === StatusEnquete.Terminée).length;
+    const fermees = enquetes.filter((e) => e.statut === StatusEnquete.Fermee).length;
 
     return {
-      actives: total > 0 ? Math.round((actives / total) * 100) : 0,
-      brouillons: total > 0 ? Math.round((brouillons / total) * 100) : 0,
-      terminees: total > 0 ? Math.round((terminees / total) * 100) : 0,
+      publiees: Math.round((publiees / total) * 100),
+      brouillons: Math.round((brouillons / total) * 100),
+      fermees: Math.round((fermees / total) * 100),
       total,
     };
   }
 
-  // Nouvelle méthode pour la participation par enquête
   async getParticipationParEnquete(userId: number) {
     const enquetes = await this.enqueteRepository.find({
       where: { user: { id: userId } },
@@ -389,50 +377,31 @@ export class ReponseService {
       '#e84393',
     ];
 
-    const participation = enquetes.map((enquete, index) => {
-      const totalReponses = enquete.reponses?.length || 0;
-      const maxReponses = 100; // Vous pouvez ajuster cette valeur selon votre logique métier
-      const value = Math.min(
-        Math.round((totalReponses / maxReponses) * 100),
-        100,
-      );
-
-      return {
-        label:
-          enquete.titre.length > 20
-            ? enquete.titre.substring(0, 20) + '...'
-            : enquete.titre,
-        value: value,
-        color: colors[index % colors.length],
-      };
-    });
-
-    return participation;
+    return enquetes.map((enquete, index) => ({
+      label: enquete.titre.length > 20 ? enquete.titre.substring(0, 20) + '...' : enquete.titre,
+      value: enquete.reponses?.length || 0,
+      color: colors[index % colors.length],
+    }));
   }
 
-  // Nouvelle méthode pour les top enquêtes
-  async getTopEnquetes(
-    userId: number,
-    periode: string = 'week',
-    limit: number = 5,
-  ) {
+  async getTopEnquetes(userId: number, periode: string = 'week', limit: number = 5) {
     let dateCondition = '';
 
     switch (periode) {
       case 'today':
-        dateCondition = `r."dateReponse" >= CURRENT_DATE`;
+        dateCondition = `AND r."dateReponse" >= CURRENT_DATE`;
         break;
       case 'week':
-        dateCondition = `r."dateReponse" >= CURRENT_DATE - INTERVAL '7 days'`;
+        dateCondition = `AND r."dateReponse" >= CURRENT_DATE - INTERVAL '7 days'`;
         break;
       case 'month':
-        dateCondition = `r."dateReponse" >= CURRENT_DATE - INTERVAL '30 days'`;
+        dateCondition = `AND r."dateReponse" >= CURRENT_DATE - INTERVAL '30 days'`;
         break;
       case 'year':
-        dateCondition = `r."dateReponse" >= CURRENT_DATE - INTERVAL '365 days'`;
+        dateCondition = `AND r."dateReponse" >= CURRENT_DATE - INTERVAL '365 days'`;
         break;
       default:
-        dateCondition = `r."dateReponse" >= CURRENT_DATE - INTERVAL '7 days'`;
+        dateCondition = `AND r."dateReponse" >= CURRENT_DATE - INTERVAL '7 days'`;
     }
 
     const topEnquetes = await this.ReponseRepo.query(
@@ -442,7 +411,7 @@ export class ReponseService {
         e.titre,
         COUNT(r.id) as nombre_reponses
       FROM "enquete" e
-      LEFT JOIN "reponse" r ON e.id = r.enquete_id AND ${dateCondition}
+      LEFT JOIN "reponse" r ON e.id = r.enquete_id ${dateCondition}
       WHERE e."userId" = $1
       GROUP BY e.id, e.titre
       ORDER BY nombre_reponses DESC
@@ -452,15 +421,11 @@ export class ReponseService {
     );
 
     return topEnquetes.map((enquete) => ({
-      nom:
-        enquete.titre.length > 25
-          ? enquete.titre.substring(0, 25) + '...'
-          : enquete.titre,
+      nom: enquete.titre.length > 25 ? enquete.titre.substring(0, 25) + '...' : enquete.titre,
       valeur: `${enquete.nombre_reponses} réponses`,
     }));
   }
 
-  // Nouvelle méthode pour les enquêtes récentes
   async getRecentEnquetes(userId: number, limit: number = 3) {
     const recentEnquetes = await this.enqueteRepository.find({
       where: { user: { id: userId } },
@@ -476,15 +441,12 @@ export class ReponseService {
       dateFin: enquete.dateFin
         ? new Date(enquete.dateFin).toLocaleDateString('fr-FR')
         : 'Non définie',
-      statut:
-        enquete.statut === StatusEnquete.Publiee          ? 'Active'
-          : enquete.statut === StatusEnquete.Brouillon
-            ? 'Brouillon'
-            : 'Terminée',
+      statut: enquete.statut === StatusEnquete.Publiee ? 'Active'
+        : enquete.statut === StatusEnquete.Brouillon ? 'Brouillon'
+        : 'Terminée',
     }));
   }
 
-  // Nouvelle méthode pour les activités récentes
   async getRecentActivities(userId: number, limit: number = 5) {
     const activities = await this.ReponseRepo.query(
       `
@@ -504,27 +466,9 @@ export class ReponseService {
       [userId, limit],
     );
 
-    const types = [
-      'Nouvelle réponse',
-      'Participation',
-      'Feedback',
-      'Réponse soumise',
-      'Enquête complétée',
-    ];
-    const icons = [
-      'fa-reply',
-      'fa-user-check',
-      'fa-comment',
-      'fa-paper-plane',
-      'fa-check-circle',
-    ];
-    const backgrounds = [
-      '#9D50BB20',
-      '#2ecc7120',
-      '#3498db20',
-      '#f39c1220',
-      '#e74c3c20',
-    ];
+    const types = ['Nouvelle réponse', 'Participation', 'Feedback', 'Réponse soumise', 'Enquête complétée'];
+    const icons = ['fa-reply', 'fa-user-check', 'fa-comment', 'fa-paper-plane', 'fa-check-circle'];
+    const backgrounds = ['#9D50BB20', '#2ecc7120', '#3498db20', '#f39c1220', '#e74c3c20'];
 
     return activities.map((activity, index) => ({
       message: `${activity.prenom} ${activity.nom} a répondu à l'enquête "${activity.enquete_titre}"`,
@@ -542,12 +486,12 @@ export class ReponseService {
     const diffHours = Math.round(diffMs / 3600000);
     const diffDays = Math.round(diffMs / 86400000);
 
+    if (diffMins < 1) return 'à l\'instant';
     if (diffMins < 60) return `il y a ${diffMins} min`;
     if (diffHours < 24) return `il y a ${diffHours} h`;
     return `il y a ${diffDays} j`;
   }
 
-  // Export méthodes existantes...
   async exportExcel(userId: number) {
     const response = await this.getallReponses(userId);
     const reponses = response.data;
@@ -559,7 +503,7 @@ export class ReponseService {
       { header: 'Nom', key: 'nom', width: 20 },
       { header: 'Prénom', key: 'prenom', width: 20 },
       { header: 'Email', key: 'email', width: 30 },
-      { header: 'Réponse', key: 'reponseTexte', width: 30 },
+      { header: 'Réponse', key: 'reponseTexte', width: 50 },
       { header: 'Date Réponse', key: 'dateReponse', width: 25 },
       { header: 'Titre Enquête', key: 'titre', width: 30 },
     ];
@@ -580,9 +524,7 @@ export class ReponseService {
         prenom: reponse.prenom ?? '',
         email: reponse.email ?? '',
         reponseTexte: reponse.reponseTexte ?? '',
-        dateReponse: reponse.dateReponse
-          ? new Date(reponse.dateReponse).toLocaleString()
-          : '',
+        dateReponse: reponse.dateReponse ? new Date(reponse.dateReponse).toLocaleString() : '',
         titre: reponse.titre ?? '',
       });
     });
@@ -595,7 +537,7 @@ export class ReponseService {
     const reponses = response.data;
 
     const doc = new jsPDF();
-
+    
     doc.setFontSize(16);
     doc.setTextColor(109, 16, 173);
     doc.text('Liste des réponses', 14, 20);
@@ -607,12 +549,12 @@ export class ReponseService {
 
     const columns = ['Nom', 'Prénom', 'Email', 'Réponse', 'Date', 'Enquête'];
     const rows = reponses.map((r) => [
-      r.nom,
-      r.prenom,
-      r.email,
-      r.reponseTexte,
+      r.nom || '',
+      r.prenom || '',
+      r.email || '',
+      r.reponseTexte || '',
       r.dateReponse ? new Date(r.dateReponse).toLocaleDateString() : '-',
-      r.titre,
+      r.titre || '',
     ]);
 
     autoTable(doc, {
@@ -664,9 +606,7 @@ export class ReponseService {
       prenom: r.prenom ?? '',
       email: r.email ?? '',
       reponseTexte: r.reponseTexte ?? '',
-      dateReponse: r.dateReponse
-        ? new Date(r.dateReponse).toLocaleString()
-        : '',
+      dateReponse: r.dateReponse ? new Date(r.dateReponse).toLocaleString() : '',
       titre: r.titre ?? '',
     }));
 

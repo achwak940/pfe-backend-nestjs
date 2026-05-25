@@ -38,4 +38,7 @@ export class Message {
   @ManyToOne(() => Utilisateur)
   @JoinColumn({ name: 'destinataire_id' })
   destinataire: Utilisateur;
+  @ManyToOne(() => Message, { nullable: true })
+message?: Message;
+
 }

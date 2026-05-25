@@ -284,4 +284,4 @@ export class AiQuestionsController {
       confidence: result.confidence
     };
   }
-}
+}   

@@ -40,7 +40,7 @@ export class AiQuestionsService {
     apiKey: process.env.GROQ_API_KEY,
   });
 
-  // Détection avancée de la langue
+
   private detectLanguage(text: string): string {
     const arabicPattern = /[\u0600-\u06FF]/;
     const tunisianPattern = /(باش|شنو|علاش|هاذا|هاذي|كيفاش|برشا|شكون)/i;
@@ -215,8 +215,9 @@ export class AiQuestionsService {
     };
     
     try {
+
       const completion = await this.groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama-3.1-70b-versatile',
         messages: [
           {
             role: 'system',
@@ -318,6 +319,7 @@ export class AiQuestionsService {
     }
   }
 
+
   // ✅ GÉNÉRATION DE QUESTION SIMPLE (legacy)
   async generateQuestion(
     prompt: string,
@@ -418,6 +420,7 @@ Génère UNE question courte en JSON:
   "intent": "satisfaction|problem|clarification|explore",
   "suggestedQuestionType": "text|single_choice|rating|scale"
 }`;
+
   }
 
   private getLanguageInstruction(lang: string): string {

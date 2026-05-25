@@ -8,25 +8,21 @@ import { Feedback } from './entities/feedback.entity';
 export class FeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}
 
-  // 🔹 Créer un nouveau feedback
   @Post()
   create(@Body() createFeedbackDto: CreateFeedbackDto): Promise<Feedback> {
     return this.feedbackService.create(createFeedbackDto);
   }
 
-  // 🔹 Récupérer tous les feedbacks
   @Get()
   findAll(): Promise<Feedback[]> {
     return this.feedbackService.findAll();
   }
 
-  // 🔹 Récupérer un feedback par son id
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Feedback> {
     return this.feedbackService.findOne(+id);
   }
 
-  // 🔹 Mettre à jour un feedback
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -35,22 +31,23 @@ export class FeedbackController {
     return this.feedbackService.update(+id, updateFeedbackDto);
   }
 
-  // 🔹 Supprimer un feedback
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
     return this.feedbackService.remove(+id);
   }
 
-  // 🔹 Récupérer les feedbacks pour un admin
-  // URL exemple: /feedback/admin/9?enqueteId=26
+  // CORRECTION: Endpoint pour les feedbacks admin
   @Get('admin/:adminId')
-  getFeedbacksForAdmin(
+  async getFeedbacksForAdmin(
     @Param('adminId') adminId: string,
     @Query('enqueteId') enqueteId?: string,
   ): Promise<Feedback[]> {
-    return this.feedbackService.getFeedbacksForAdmin(
-      +adminId,
-      enqueteId ? +enqueteId : undefined,
-    );
+    return this.feedbackService.getFeedbacksForAdmin(+adminId, enqueteId ? +enqueteId : undefined);
+  }
+
+  // Nouvel endpoint pour les statistiques admin
+  @Get('stats/admin/:adminId')
+  async getStatsForAdmin(@Param('adminId') adminId: string): Promise<any> {
+    return this.feedbackService.getStatsForAdmin(+adminId);
   }
 }

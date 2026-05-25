@@ -1,9 +1,8 @@
-// reponse.controller.ts - Version corrigée
 import { Controller, Get, Post, Body, Patch, Param, Delete, Res, Query } from '@nestjs/common';
 import { ReponseService } from './reponse.service';
 import { CreateReponseDto } from './dto/create-reponse.dto';
 import { UpdateReponseDto } from './dto/update-reponse.dto';
-import type { Response } from 'express'; // Utiliser 'import type' pour éviter l'erreur TS1272
+import type { Response } from 'express';
 
 @Controller('reponse')
 export class ReponseController {
@@ -47,7 +46,7 @@ export class ReponseController {
   @Get('exportExcel/all/:id')
   async exportUtilisateursConnecte(@Res() res: Response, @Param('id') id: string) {
     try {
-      const fileExcel = await this.reponseService.exportExcel(+id);
+      const workbook = await this.reponseService.exportExcel(+id);
       res.setHeader(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -56,11 +55,11 @@ export class ReponseController {
         'Content-Disposition',
         'attachment; filename=reponses.xlsx',
       );
-      await fileExcel.xlsx.write(res);
+      await workbook.xlsx.write(res);
       res.end();
     } catch (error) {
       console.error("EXPORT ERROR ❌", error);
-      res.status(500).send("Erreur export");
+      res.status(500).json({ error: "Erreur export Excel" });
     }
   }
 
@@ -79,7 +78,7 @@ export class ReponseController {
       res.end(pdfBuffer);
     } catch (error) {
       console.error('PDF ERROR ❌', error);
-      res.status(500).send('Erreur export PDF');
+      res.status(500).json({ error: 'Erreur export PDF' });
     }
   }
 
@@ -98,7 +97,7 @@ export class ReponseController {
       res.send(csv);
     } catch (error) {
       console.error('CSV ERROR ❌', error);
-      res.status(500).send('Erreur export CSV');
+      res.status(500).json({ error: 'Erreur export CSV' });
     }
   }
 
@@ -108,7 +107,7 @@ export class ReponseController {
   }
 
   @Get("/detailles/:id")
-  async deatilleReponse(@Param('id') id: string) {
+  async detailReponse(@Param('id') id: string) {
     return this.reponseService.getAllReponsesDetail(+id);
   }
 
@@ -118,8 +117,8 @@ export class ReponseController {
   }
 
   @Get('top-users/:id')
-  async getTopUtilisateurs(@Param('id') id: string) {
-    return this.reponseService.getTopUtilisateurs(+id);
+  async getTopUtilisateurs(@Param('id') id: string, @Query('limit') limit: string = '5') {
+    return this.reponseService.getTopUtilisateurs(+id, +limit);
   }
 
   @Get('taux-completion/:id')
@@ -128,11 +127,13 @@ export class ReponseController {
   }
 
   @Get('participation-periode/:id')
-  async getParticipationParPeriode(@Param('id') id: string) {
-    return this.reponseService.getParticipationParPeriode(+id);
+  async getParticipationParPeriode(
+    @Param('id') id: string,
+    @Query('periode') periode: string = 'week'
+  ) {
+    return this.reponseService.getParticipationParPeriode(+id, periode);
   }
 
-  // Nouveaux endpoints pour le dashboard
   @Get('evolution-reponses/:id')
   async getEvolutionReponses(
     @Param('id') id: string,
@@ -175,4 +176,4 @@ export class ReponseController {
   ) { 
     return this.reponseService.getRecentActivities(+id, +limit);
   }
-}  
+}

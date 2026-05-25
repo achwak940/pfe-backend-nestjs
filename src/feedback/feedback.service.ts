@@ -12,13 +12,11 @@ export class FeedbackService {
     private readonly feedbackRepository: Repository<Feedback>,
   ) {}
 
-  // 🔹 Créer un nouveau feedback
   async create(createFeedbackDto: CreateFeedbackDto): Promise<Feedback> {
     const feedback = this.feedbackRepository.create(createFeedbackDto);
     return this.feedbackRepository.save(feedback);
   }
 
-  // 🔹 Récupérer tous les feedbacks
   async findAll(): Promise<Feedback[]> {
     return this.feedbackRepository.find({
       relations: ['utilisateur', 'enquete'],
@@ -26,7 +24,6 @@ export class FeedbackService {
     });
   }
 
-  // 🔹 Récupérer un feedback par son id
   async findOne(id: number): Promise<Feedback> {
     const feedback = await this.feedbackRepository.findOne({
       where: { id },
@@ -40,31 +37,18 @@ export class FeedbackService {
     return feedback;
   }
 
-  // 🔹 Mettre à jour un feedback existant
   async update(id: number, updateFeedbackDto: UpdateFeedbackDto): Promise<Feedback> {
-    const feedback = await this.feedbackRepository.findOne({
-      where: { id },
-    });
-
-    if (!feedback) {
-      throw new NotFoundException(`Feedback avec id ${id} non trouvé`);
-    }
-
-    Object.assign(feedback, updateFeedbackDto); // applique les changements
+    const feedback = await this.findOne(id);
+    Object.assign(feedback, updateFeedbackDto);
     return this.feedbackRepository.save(feedback);
   }
 
-  // 🔹 Supprimer un feedback
   async remove(id: number): Promise<void> {
-    const feedback = await this.feedbackRepository.findOne({ where: { id } });
-    if (!feedback) {
-      throw new NotFoundException(`Feedback avec id ${id} non trouvé`);
-    }
-    await this.feedbackRepository.delete(id);
+    const feedback = await this.findOne(id);
+    await this.feedbackRepository.remove(feedback);
   }
 
-  // 🔹 Récupérer les feedbacks pour un admin
-  // Si enqueteId est fourni, filtre uniquement cette enquête
+  // CORRECTION IMPORTANTE: Récupérer les feedbacks pour un admin
   async getFeedbacksForAdmin(adminId: number, enqueteId?: number): Promise<Feedback[]> {
     const query = this.feedbackRepository
       .createQueryBuilder('feedback')
@@ -77,5 +61,30 @@ export class FeedbackService {
     }
 
     return query.orderBy('feedback.date_creation', 'DESC').getMany();
+  }
+
+  // Nouvelle méthode pour obtenir les statistiques
+  async getStatsForAdmin(adminId: number): Promise<any> {
+    const feedbacks = await this.getFeedbacksForAdmin(adminId);
+    
+    const total = feedbacks.length;
+    const nouveaux = feedbacks.filter(f => f.statut === 'nouveau').length;
+    const enCours = feedbacks.filter(f => f.statut === 'en_cours').length;
+    const resolus = feedbacks.filter(f => f.statut === 'resolu').length;
+    
+    const suggestions = feedbacks.filter(f => f.type === 'suggestion').length;
+    const problemes = feedbacks.filter(f => f.type === 'probleme_technique').length;
+    const questions = feedbacks.filter(f => f.type === 'question').length;
+    
+    return {
+      total,
+      nouveaux,
+      enCours,
+      resolus,
+      suggestions,
+      problemes,
+      questions,
+      tauxResolution: total > 0 ? Math.round((resolus / total) * 100) : 0
+    };
   }
 }

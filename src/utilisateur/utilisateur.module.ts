@@ -6,9 +6,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Enquete } from 'src/enquete/entities/enquete.entity';
 import { Reponse } from 'src/reponse/entities/reponse.entity';
 import { Reclamation } from 'src/reclamation/entities/reclamation.entity';
+import { Role } from 'src/role/entities/role.entity';
+import { Message } from 'src/message/entities/message.entity';
 @Module({
-  imports:[TypeOrmModule.forFeature([Utilisateur,Enquete,Reponse,Reclamation])],
+  imports:[TypeOrmModule.forFeature([Utilisateur,Enquete,Reponse,Reclamation,Role,Message])],
   controllers: [UtilisateurController],
   providers: [UtilisateurService],
 })
 export class UtilisateurModule {}
+ 
