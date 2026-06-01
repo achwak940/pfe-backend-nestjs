@@ -74,6 +74,6 @@ export class RecommendationController {
       data.device_enc,
       data.damage_enc,
       data.total_damage
-    );
-  }
+    ); 
+  } 
 }
